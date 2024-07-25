@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 //! comentar la línea siguiente para no compliar salidas por consola (debug)
-//#define COMPILAR_DEBUG 1
+// #define COMPILAR_DEBUG 1
 
 #define WDT_TIMEOUT 300 // segundos
 #define WDT_SI 1
@@ -16,17 +16,15 @@
 #define MODO_INTER 5 // Interruptor
 #define MODO_DESPO 6 // Despolarización
 
-#define CAMBIO_MODO_FUNCIONAMIENTO   1 // registro modo de funcionamiento
-#define CAMBIO_REFERENCIA   9 // registro referencia
-#define CAMBIO_TIPO_ENSAYO 12 // registro tipo de ensayo
+#define CAMBIO_MODO_FUNCIONAMIENTO 1 // registro modo de funcionamiento
+#define CAMBIO_REFERENCIA 9          // registro referencia
+#define CAMBIO_TIPO_ENSAYO 12        // registro tipo de ensayo
 
 #define LECTURA 0
 #define ESCRITURA 1
 
 extern const String VERSION;
 
-extern HardwareSerial RS485_int; // UART0, utilizada para comunicación con los módulos
-extern HardwareSerial RS485_GPS; // UART1, comunicación con el GPS
 extern HardwareSerial RS485_ext; // UART2, comunicación con el maestro
 
 // Valores nominales
@@ -43,7 +41,6 @@ extern float Imin;
 
 extern uint8_t modo_funcionamiento;
 
-extern uint64_t t_Ty;
 extern float referencia;
 
 // número de pantalla a mostrar
@@ -65,7 +62,7 @@ extern uint16_t regs[];
 // Variables para definir registros de solo lectura
 extern const bool regs_lectura[];
 
-extern uint16_t regs_entrantes[];
+extern int regs_entrantes[];
 
 // Variables para el cuenta horas
 extern unsigned long hs_Func;
@@ -74,12 +71,18 @@ extern uint16_t hs_FuncH, hs_FuncL;
 extern uint8_t estadoEnsayo;
 
 extern // para ejecutar o no la tarea 'mi_modbus'
-bool tarea_mi_modbus_habilitada;
+    bool tarea_mi_modbus_habilitada;
 
 // para contar cuantas marcas de 1" se perdieron
-extern uint8_t cont_faltaPPS; 
+extern uint8_t cont_faltaPPS;
 
 // registro de alarmas
 extern uint8_t alarmas;
+
+// para armar cadena para enviar
+extern char cadena_a_enviar[];
+
+// para indicar que entró un mensaje
+extern bool atender;
 
 #endif // __VARFUNCIONAMIENTO_H__

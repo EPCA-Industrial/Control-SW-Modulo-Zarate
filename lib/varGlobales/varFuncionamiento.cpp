@@ -18,7 +18,6 @@ float Imin;
 
 uint8_t modo_funcionamiento = 0;
 
-uint64_t t_Ty = 9000;
 float referencia;
 
 bool salida_ON = 0;
@@ -64,7 +63,7 @@ const bool regs_lectura[cant_Registros] = {
 };
 
 // Variables para almacenar mensaje recibido del rack
-uint16_t regs_entrantes[9] = {
+int regs_entrantes[9] = {
     /*00*/ 0, // Byte inicio '$'
     /*01*/ 0, // # módulo
     /*02*/ 0, // Esc/Lec
@@ -87,3 +86,9 @@ uint8_t cont_faltaPPS = 0;
 
 // registro de alarmas
 uint8_t alarmas = 0;
+
+// para armar cadena para enviar
+char cadena_a_enviar[50];
+
+// para indicar que entró un mensaje
+bool atender;

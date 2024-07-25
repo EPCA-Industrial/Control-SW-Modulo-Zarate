@@ -8,11 +8,11 @@ void configuraPines(void)
     pinMode(SW_B, INPUT_PULLUP);
     pinMode(SW, INPUT_PULLUP);
 
+    pinMode(ENABLE_1, OUTPUT);
+    pinMode(ENABLE_2, OUTPUT);
+
     // buzzer
     pinMode(BUZZER, OUTPUT);
-
-    // Cx0
-    pinMode(Cx0, INPUT_PULLUP);
 
     // establece pines SPI
     pinMode(SELPIN, OUTPUT);
@@ -20,28 +20,21 @@ void configuraPines(void)
     pinMode(DATAIN, INPUT);
     pinMode(SPICLOCK, OUTPUT);
 
+    pinMode(OUTVCCX, OUTPUT);
+
     // entrada/salida libres
-    pinMode(IN_DIG_04, INPUT_PULLUP);
+    pinMode(VIN_DETECTADA, INPUT);
     pinMode(OUT_DIG_05, OUTPUT);
 
     // leds
     pinMode(LED_DEBUG1, OUTPUT);
     pinMode(LED_DEBUG2, OUTPUT);
 
+    // PWM
+    pinMode(PWM_pin18, OUTPUT);
+
     // Interruptor
-    pinMode(DISP_INT, OUTPUT);
-
-    // Pulso de disparo
-    pinMode(PULSO_DISPARO, OUTPUT);
-
-    // GPS
-    pinMode(PPS, INPUT_PULLDOWN);
-    pinMode(ON_GPS, OUTPUT);
-    pinMode(RST_GPS, OUTPUT);
-
-    //Tibbo
-    pinMode(Modo_EM203, OUTPUT);
-    pinMode(RST_EM203, OUTPUT);
+    pinMode(DISP_INT, INPUT_PULLDOWN);
 
     // RS485 R/W
     pinMode(RS485_RW, OUTPUT);

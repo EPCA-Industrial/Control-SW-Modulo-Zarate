@@ -1,3 +1,9 @@
 19-07-24
 -Empiezo a partir de '240419-080000_ER-Aut_Ethernet' V1.1.1
 -Saco el control de ensayo (se hará desde el rack superior)
+-El control de la salida lo hace el hard.Eeste soft sólo le
+ fija una referencia, por medio de un PWM, proporcional a 
+ la escala del parámetro a controlar.
+
+25-07-24
+commit VERSION = "V: 1.0.0"

@@ -9,5 +9,7 @@ void envia_a_Modulos(String _msj);
 char *Str_a_char(String _str);
 bool atiendoPeticion(void);
 uint16_t check_Sum(void);
+void armaCadenaValores(void);
+void recibeYanalizaValores(void);
 
 #endif // __RS485_H__

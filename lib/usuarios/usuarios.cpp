@@ -7,7 +7,6 @@
 #include "varMedicion.h"
 
 Preferences pref;
-extern uint16_t regs[];
 
 unsigned int claveFabricante = 1111;
 

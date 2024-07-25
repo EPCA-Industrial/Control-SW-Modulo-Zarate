@@ -12,7 +12,8 @@
 int read_adc(int channel);
 float mide(int _canal, int _veces);
 void mideTodo(void);
-//bool analizaAlarmas(void);
+void analizaAlarmas(void);
+//int readADCPrueba(int channel);
 //void alarmaVca_Sleep(void);
 
 #endif // __ADC_H__

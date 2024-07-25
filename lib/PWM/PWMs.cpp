@@ -23,7 +23,7 @@ void configura_PWMs(void)
     // ledcWrite(PWM_CANAL_0, 0);
     // ledcWrite(PWM_CANAL_1, 0);
     configura_PWM(LED_DEBUG2, PWM_CANAL_0);
-    configura_PWM(PMM_pin18, PWM_CANAL_1);
+    configura_PWM(PWM_pin18, PWM_CANAL_1);
 }
 
 void configura_PWM(uint8_t pin, uint8_t canal)
@@ -62,7 +62,7 @@ void prueba_PWM(void)
 {
     // set the angulo on LEDC 
     ledcAnalogWrite(PWM_CANAL_0, ang_pwm);
-    ledcAnalogWrite(PWM_CANAL_1, ang_pwm);
+    //ledcAnalogWrite(PWM_CANAL_1, ang_pwm);
 
     // cambia el angulo la próxima entrada al bucle:
     ang_pwm = ang_pwm + fadeAmount;
@@ -74,7 +74,7 @@ void prueba_PWM(void)
     }
 }
 
-void fija_Angulo(uint32_t _angulo)
+void fija_Angulo(int _angulo)
 {
     ledcWrite(PWM_CANAL_1, _angulo);
 }

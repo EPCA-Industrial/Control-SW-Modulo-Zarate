@@ -13,8 +13,6 @@ extern LiquidCrystal_I2C lcd;
 
 extern unsigned int claveFabricante;
 
-extern uint64_t t_Ty;
-
 String txt_referencia;
 uint8_t digitos, dec;
 uint8_t sensibilidad, multiplicador; // para cambiar reacción del encoder
@@ -146,7 +144,7 @@ void configuraInicio(void)
 {
     uint8_t menu_Nromodulo = 0;
     uint8_t opcion_0 = 0;
-    uint8_t opcion_01 = 0;
+    //uint8_t opcion_01 = 0;
     uint8_t opcion_02 = 0;
 
     char auxTxt[16];
@@ -196,13 +194,7 @@ void configuraInicio(void)
                     EstableceAcentos(AcentosP_ModoFto);
                     modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
 
-                    // pasa el modo_funcionamiento al
-                    regs[1] = modo_funcionamiento;
-
                     referencia = 0;
-                    regs[9] = referencia;
-
-                    cargaVector_desdeVariables();
 
                     guardaNVS_EstadoER();
 
@@ -610,11 +602,9 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
         if (!configurando)
         {
             mideTodo();
-
-            t_Ty = corrige_angulo_TMR(N / pow(10, _dec));
-
             muestraMedicion(1, 4, estadoEnsayo);
             muestraReferencia(nombre, N / pow(10, _dec), co, fi);
+            controlFuentes(N / pow(10, _dec));
         }
         else
         {
@@ -624,7 +614,6 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
 
         if (modo_funcionamiento != MODO_INTER)
         {
-
             if (millis() > (t_ant + 5000))
             {
                 break;
@@ -636,6 +625,7 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
             break;
         }
     }
+
     delay(100);
     return (N / pow(10, _dec));
 }
@@ -672,13 +662,8 @@ void menuEncoder(void)
     {
         EstableceAcentos(AcentosP_ModoFto);
         modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
-        // pasa el modo_funcionamiento al
-        regs[1] = modo_funcionamiento;
 
         referencia = 0;
-        regs[9] = referencia;
-
-        cargaVector_desdeVariables();
 
         guardaNVS_EstadoER();
 
@@ -713,7 +698,7 @@ void formateaReferencia(void)
     switch (modo_funcionamiento)
     {
     case MODO_I_CTE:
-        txt_referencia = "A";
+        txt_referencia = "A ";
         digitos = 4;
         dec = 1;
         maximo = 10 * ER_Icc;
@@ -734,7 +719,7 @@ void formateaReferencia(void)
 
         break;
     case MODO_M_ELE:
-        txt_referencia = "%";
+        txt_referencia = "%  ";
         digitos = 2;
         dec = 0;
         maximo = 99;
@@ -744,7 +729,7 @@ void formateaReferencia(void)
 
         break;
     case MODO_V_CTE:
-        txt_referencia = "V";
+        txt_referencia = "V ";
         digitos = 4;
         dec = 1;
         maximo = 10 * ER_Vcc /*  * pow10(dec) */;
@@ -778,6 +763,7 @@ void muestraReferencia(String etiqueta, float _ref, uint8_t _c, uint8_t _f)
             _ref /= 10;
         }
     }
+
     sprintf(txt, "%s%0*.*f", etiqueta, digitos, dec, _ref);
     lcd_print_Posicion(_c, _f, txt + txt_referencia);
 }
@@ -817,19 +803,6 @@ void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est)
             sprintf(bufferTxt, "Hs: %li", (unsigned long)hs_FuncH * 32767 + (unsigned long)hs_FuncL);
             lcd_print_Posicion(1, 2, "        ");
             lcd_print_Posicion(1, 2, bufferTxt);
-
-            if (t_Ty > 3150)
-            {
-                lcd_print_Posicion(1, 3, "Baje regulacion ");
-                lcd.setCursor(9, 2);
-                lcd.write(4);
-            }
-            else
-            {
-                lcd_print_Posicion(1, 3, "Salida continua ");
-                lcd.setCursor(7, 2);
-                lcd.write(3);
-            }
 
             pant = 1;
         }
@@ -888,9 +861,6 @@ void referenciaEncoder(void)
         formateaReferencia();
 
         referencia = encoder("R: ", referencia, maximo, minimo, multiplicador, sensibilidad, 1, 4, 0);
-
-        // pasa la referencia al registro
-        regs[9] = referencia;
         // delay(20);
         guardaNVS_EstadoER();
     }

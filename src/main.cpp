@@ -26,7 +26,6 @@
 // Version                                      *
 // Version                                      *
 
-hw_timer_t *TMR_Ty = NULL;
 
 TaskHandle_t mi_comunicacion;
 
@@ -37,6 +36,19 @@ static void func_com(void *pvParameters);
 // static void debug(void);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/// @brief Atiende un ensaje entrante poniendo en la/s variable/s el valor recibido.
+/// @example ' $, #módulo, Esc/Lec, modo, referencia, estados, checkSum, * '
+/// @warning $, #módulo, Lec/Esc, ..., checkSum y * deben estar siempre incluidos.
+/// @warning Las variables: modo, referencia y estados deben ser enviadas en ese orden;
+/// @warning si no se quiere cambiar alguna, se enviará en su lugar -1 salvo que esté después de la que se quiere cambiar.
+/// @example $, 2, 1, -1, 10, 12, * (no se envía 'estados' por estar después de la referencia que es el valor a establecer)
+/// @example    ^  ^   ^   ^   ^
+/// @example    |  |   |   |   └ ckeckSum
+/// @example    |  |   |   └──── valor de la referencia a establecer
+/// @example    |  |   └──────── el modo no se cambia
+/// @example    |  └──────────── indica escritura de alguna variable
+/// @example    └─────────────── para el módulo #2
+/// @param pvParameters
 static void func_com(void *pvParameters)
 {
     while (1)
@@ -45,22 +57,47 @@ static void func_com(void *pvParameters)
         // Resetea el WDT
         esp_task_wdt_reset();
 #endif
-        // Procesar mensaje entrante
-        if (atiendoPeticion())
+
+        if (atender != 1)
+        {
+            recibeYanalizaValores();
+        }
+        else
         {
             if (regs_entrantes[1] == num_modulo)
             {
                 if (regs_entrantes[2] == ESCRITURA)
                 {
-                    referencia = regs_entrantes[4] * 256 + regs_entrantes[5];
-                    modo_funcionamiento = regs_entrantes[3];
-                   
+                    if (regs_entrantes[3] != -1)
+                    {
+                        modo_funcionamiento = regs_entrantes[3];
+                    }
+                    if (regs_entrantes[4] != -1)
+                    {
+                        referencia = regs_entrantes[4];
+                    }
+
                     formateaReferencia();
                     guardaNVS_EstadoER();
-                    
+
+                    envia_a_Maestro("Recibido Ok\n ");
+
                     Serial.println("Cambio la referencia y el modo");
                 }
+                else if (regs_entrantes[2] == LECTURA)
+                {
+                    armaCadenaValores();
+
+                    digitalWrite(RS485_RW, HIGH);
+                    delay(100);
+                    RS485_ext.write(cadena_a_enviar);
+                    delay(100);
+                    digitalWrite(RS485_RW, LOW);
+
+                    Serial.println("Valores enviados.");
+                }
             }
+            atender = 0;
         }
     }
 }
@@ -124,11 +161,6 @@ void setup()
     leeNVS_EstadoER();
     leeNVS_HsFunc();
 
-    //! ------------------------ VER --------------------------
-    // carga en la variable regs[] (no los registros Modbus), con los valores de las variables
-    cargaVector_desdeVariables();
-    //! ------------------------ VER --------------------------
-
     // muestra pantallas iniciales: 'Imastec' y 'Características'
     presentacion();
 
@@ -164,20 +196,14 @@ void setup()
 
     neopixelWrite(BUILTIN_LED, 0, 0, 0);
 
-    delay(100);
-
-    timerStop(TMR_Ty);
-    t_Ty = 9000;
-    timerStart(TMR_Ty);
-
-    delay(100);
-
     // habilito tarea
     vTaskResume(mi_comunicacion);
 
     // enciende salida
     digitalWrite(DISP_INT, salida_ON);
     digitalWrite(LED_DEBUG1, HIGH);
+
+    controlFuentes(referencia);
 }
 
 void loop()
@@ -186,17 +212,17 @@ void loop()
     // Resetea el WDT
     esp_task_wdt_reset();
 #endif
-    // prueba_PWM();
+    //prueba_PWM();
 
     mideTodo();
 
-    //!    sobre_I();
+    analizaAlarmas();
 
-    //!    ctaHoras();
+    sobre_I();
 
-    fija_Angulo(100);
+    ctaHoras();
 
-    t_Ty = corrige_angulo_TMR(referencia);
+    controlFuentes(referencia);
 
     muestraMedicion(1, 4, estadoEnsayo);
 
@@ -208,6 +234,8 @@ void loop()
 
     // habilito tarea
     vTaskResume(mi_comunicacion);
+
+    // delay(1000);
 }
 
 /* void debug(void)

@@ -6,13 +6,6 @@
 #include <esp_task_wdt.h>
 
 uint8_t estadoAnteriorAlarmas = 0;
-uint8_t estadoActualAlarmas;
-
-extern TaskHandle_t mi_modbus;
-extern uint8_t alarmasHabilitadas;
-extern int umbralPmax, umbralPmin;
-extern uint8_t umbralImax;
-extern bool estadoGPS;
 
 int read_adc(int channel)
 {
@@ -112,71 +105,9 @@ void mideTodo(void)
     // digitalWrite(LED_DEBUG2, LOW);
 }
 
-/*bool analizaAlarmas(void)
+void analizaAlarmas(void)
 {
-    bool enviar = 0;
-    estadoActualAlarmas = estadoActualAlarmas & 0b10000000; // En cero todo, menos el GPS
-
-    // Puerta abierta
-    if (digitalRead(IN_DIG_04))
-    {
-        estadoActualAlarmas = estadoActualAlarmas | 0b00000001;
-    }
-    else
-    {
-        estadoActualAlarmas = estadoActualAlarmas & 0b11111110;
-    }
-
-    // Si supera el umbral (Vca OK)...
-    if (Vca > UMBRAL_VCA)
-    {
-        // ...pero viene una alarma Vca anterior, espera alcanzar el valor más la histéresis
-        if ((estadoAnteriorAlarmas & 0b00000010) == 2)
-        {
-            // Alcanzó la histéresis del valor
-            if (Vca > UMBRAL_VCA * 1.1)
-            {
-                // Apaga la alarma
-                estadoActualAlarmas = estadoActualAlarmas & 0b11111101;
-            }
-            // No alcanzó la histéresis del valor, se mantiene la alarma
-            else
-            {
-                // mantiene la alarma
-                estadoActualAlarmas = estadoActualAlarmas | 0b00000010;
-            }
-        }
-    }
-    else
-    {
-        // Hay alarma Vca < AlarmaVca
-        estadoActualAlarmas = estadoActualAlarmas | 0b00000010;
-    }
-
-    // Si supera el umbral (Vbat OK)...
-    if (VBat > UMBRAL_VBT)
-    {
-        // ...pero viene una alarma Vbat anterior, espera alcanzar el valor más la histéresis
-        if ((estadoAnteriorAlarmas & 0b00000100) == 4)
-        {
-            // Alcanzó la histéresis del valor
-            if (VBat > HISTERESIS_VBT)
-            {
-                // Apaga la alarma
-                estadoActualAlarmas = estadoActualAlarmas & 0b11111011;
-            }
-            else
-            {
-                // No alcanzó la histéresis del valor, se mantiene la alarma
-                estadoActualAlarmas = estadoActualAlarmas | 0b00000100;
-            }
-        }
-    }
-    else
-    {
-        // Hay alarma VBat < AlarmaVbat
-        estadoActualAlarmas = estadoActualAlarmas | 0b00000100;
-    }
+    alarmas = alarmas & 0b00000000; // Todo en cero
 
     // Si está por debajo del umbral (I0 OK)...
     if (Icc > UMBRAL_I0)
@@ -188,111 +119,68 @@ void mideTodo(void)
             if (Icc > HISTERESIS_I0)
             {
                 // Apaga la alarma
-                estadoActualAlarmas = estadoActualAlarmas & 0b11110111;
+                alarmas = alarmas & 0b11110111;
             }
             else
             {
                 // No alcanzó la histéresis del valor, se mantiene la alarma
-                estadoActualAlarmas = estadoActualAlarmas | 0b00001000;
+                alarmas = alarmas | 0b00001000;
             }
         }
     }
     else
     {
         // Hay alarma I < UMBRAL_I0
-        estadoActualAlarmas = estadoActualAlarmas | 0b00001000;
+        alarmas = alarmas | 0b00001000;
     }
 
     //  Si está por debajo del umbral IMax OK (definida por el usuario)
-    if (Icc <= (umbralImax))
+    if (Icc <= (ER_Icc))
     {
         // ...pero viene de una alarma IMax anterior, espera alcanzar el valor más la histéresis
         if ((estadoAnteriorAlarmas & 0b00010000) == 16)
         {
             // Viene de alarma Imax anterior
-            if (Icc < umbralImax * 0.98)
+            if (Icc < ER_Icc * 0.98)
             {
                 // Alcanzó la histéresis del valor
-                estadoActualAlarmas = estadoActualAlarmas & 0b11101111;
+                alarmas = alarmas & 0b11101111;
             }
             else
             {
                 // No alcanzó la histéresis del valor, se mantiene la alarma
-                estadoActualAlarmas = estadoActualAlarmas | 0b00010000;
+                alarmas = alarmas | 0b00010000;
             }
         }
     }
     else
     {
         // Hay alarma I > Imax
-        estadoActualAlarmas = estadoActualAlarmas | 0b00010000;
+        alarmas = alarmas | 0b00010000;
     }
 
-    // Si tiene hemipila evalua alarmas de potencial -- Define usuario
-    if (Pot >= -umbralPmin)
-    {
-        // No hay alarma Pmin
-        if ((estadoAnteriorAlarmas & 0b00100000) == 32)
-        {
-            // Viene de alarma Pmin anterior
-            if (Pot > -umbralPmin * 0.9)
-            {
-                // Alcanzó la histéresis del valor
-                estadoActualAlarmas = estadoActualAlarmas & 0b11011111;
-            }
-            else
-            {
-                // No alcanzó la histéresis del valor, se mantiene la alarma
-                estadoActualAlarmas = estadoActualAlarmas | 0b00100000;
-            }
-        }
-    }
-    else
-    {
-        // Hay alarma P < -Pmin
-        estadoActualAlarmas = estadoActualAlarmas | 0b00100000;
-    }
-
-    if (Pot <= (-umbralPmax))
-    {
-        // No hay alarma PMax
-        if ((estadoAnteriorAlarmas & 0b01000000) == 64)
-        {
-            // Viene de alarma Pmax anterior
-            if (Pot < -umbralPmax * 1.1)
-            {
-                // Alcanzó la histéresis del valor
-                estadoActualAlarmas = estadoActualAlarmas & 0b10111111;
-            }
-            else
-            {
-                // No alcanzó la histéresis del valor, se mantiene la alarma
-                estadoActualAlarmas = estadoActualAlarmas | 0b01000000;
-            }
-        }
-    }
-    else
-    {
-        // Hay alarma P > -Pmax
-        estadoActualAlarmas = estadoActualAlarmas | 0b01000000;
-    }
-
-    if (!estadoGPS)
-    {
-        estadoActualAlarmas = estadoActualAlarmas | 0b10000000;
-    }
-
-    if ((estadoAnteriorAlarmas & alarmasHabilitadas) != (estadoActualAlarmas & alarmasHabilitadas))
-    {
-        enviar = 1;
-#ifdef COMPILAR_DEBUG
-        Serial.printf("\rActual: %03d Anterior: %03d", estadoActualAlarmas, estadoAnteriorAlarmas);
-#endif
-        estadoAnteriorAlarmas = estadoActualAlarmas;
-    }
-#ifdef COMPILAR_DEBUG
-    // Serial.printf("\rActual: %03d Anterior: %03d", estadoActualAlarmas, estadoAnteriorAlarmas);
-#endif
-    return enviar;
+    estadoAnteriorAlarmas = alarmas;
 }
-*/
+
+/* int readADCPrueba(int channel) {
+    if (channel < 0 || channel > 7) {
+        return -1; // Canal fuera de rango
+    }
+
+    // Configurar el comando para el MCP3208
+    byte command = 0b00000110 | ((channel & 0x04) >> 2);
+    byte command2 = ((channel & 0x03) << 6);
+
+    digitalWrite(SELPIN, LOW); // Activa el chip
+
+    // Enviar el comando y leer los valores
+    SPI.transfer(command);
+    byte highByte = SPI.transfer(command2);
+    byte lowByte = SPI.transfer(0);
+
+    digitalWrite(SELPIN, HIGH); // Desactiva el chip
+
+    // Combinar los bytes recibidos
+    int result = ((highByte & 0x0F) << 8) | lowByte;
+    return result;
+} */

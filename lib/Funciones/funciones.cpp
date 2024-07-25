@@ -7,6 +7,11 @@
 #include "varMedicion.h"
 #include "usuarios.h"
 #include <esp_task_wdt.h>
+#include "PWMs.h"
+#include "display16x2.h"
+#include "LiquidCrystal_I2C.h"
+
+extern LiquidCrystal_I2C lcd;
 
 // Variables locales para el cuenta horas
 unsigned long previousMillis = 0;      // Tiempo de referencia para la temporización
@@ -20,144 +25,6 @@ float valor = 9000;
 
 int seg_ant, seg_act;
 uint16_t contErrGPS = 0;
-
-/// @brief Ajusta el ángulo del disparo para tiristores
-/// @param _ref
-/// @return
-uint64_t corrige_angulo_TMR(float _ref)
-{
-    float incremento = 0;
-
-    switch (modo_funcionamiento)
-    {
-    case MODO_I_CTE:
-        _ref = _ref / 10;
-
-        incremento = 100 * (_ref - Icc) / _ref;
-
-        valor -= incremento;
-
-        break;
-    case MODO_P_CTE:
-        incremento = 100 * (_ref + Pot) / _ref;
-
-        if (Icc < ER_Icc)
-        {
-            valor -= incremento * 5;
-        }
-        else
-        {
-            valor += 50;
-        }
-        // valor -= incremento * 5;
-        break;
-
-    case MODO_V_CTE:
-        _ref = _ref / 10;
-
-        incremento = 100 * (_ref - Vcc) / _ref;
-
-        if (Icc < ER_Icc)
-        {
-            valor -= incremento * 5;
-        }
-        else
-        {
-            valor += 50;
-        }
-
-        // valor -= incremento * 5;
-        break;
-
-    case MODO_M_ELE:
-        // incremento = 100 * (_ref - t_Ty) / _ref;
-        float t_ty_ref;
-
-        // convierto el valor de la referencia al número que corresponde
-        // al disparo para comparar con el valor actual del disparo
-        // 9000 (1 - ref/100)
-        t_ty_ref = 9000 - 90 * _ref;
-
-        incremento = 100 * (t_ty_ref - t_Ty) / t_ty_ref;
-
-        if (incremento > 0)
-        {
-            valor += incremento * 10;
-        }
-        else
-        {
-            if (Icc < ER_Icc)
-            {
-                valor += incremento * 5;
-            }
-            else
-            {
-                valor += 50;
-            }
-        }
-
-        //! valor = 9000 - (9000 * _ref / 100);
-        break;
-
-    case MODO_INTER:
-        valor = 9000 - (9000 * _ref / 100);
-        break;
-
-    default:
-        break;
-    }
-
-    // TMR máximo -> Salida mínima
-    if (valor > 9000)
-    {
-        valor = 9000;
-    }
-    // TMR mínimo -> Salida Máxima
-    if (valor < 50)
-    {
-        valor = 50;
-    }
-#ifdef COMPILAR_DEBUG
-// Serial.printf("V: %5.2f I: %5.2f P: %05.0f Ref: %5.2f TMR: %05u\r", Vcc, Icc, Pot, _ref, (uint64_t)valor);
-#endif
-
-    return (uint64_t)valor;
-}
-
-/// @brief pasa valores desde el vector regs[] a variables de funcionamiento
-/// @param
-void cargaVariables_desdeVector(void)
-{
-    // carga las variables con el vector 'regs[]' (no los registros Modbus)
-    modo_funcionamiento = regs[1];
-
-    referencia = regs[9];
-
-    hs_FuncH = regs[10];
-    hs_FuncL = regs[11];
-}
-
-/// @brief carga en la variable regs[] (no los registros Modbus), con los valores de las variables
-/// @param
-void cargaVector_desdeVariables(void)
-{
-    regs[1] = modo_funcionamiento;
-
-    regs[9] = referencia;
-    regs[10] = hs_FuncH;
-    regs[11] = hs_FuncL;
-/*     regs[12] = ensayo1.tipo;
-    regs[13] = ensayo1.zh;
-    regs[14] = ensayo1.inicio.hora * 100 + ensayo1.inicio.minuto;
-    regs[15] = ensayo1.fin.hora * 100 + ensayo1.fin.minuto;
-    regs[16] = ensayo1.t_on;
-    regs[17] = ensayo1.t_of;
-    regs[18] = ensayo1.inicio.dia * 100 + ensayo1.inicio.mes;
-    regs[19] = ensayo1.inicio.ano;
-    regs[20] = ensayo1.fin.dia * 100 + ensayo1.fin.mes;
-    regs[21] = ensayo1.fin.ano;
-    regs[22] = ensayo1.estados; */
-}
 
 /// @brief verifica que no se pierdan lecturas del GPS, comparando el segundo actual con el anterior + 1
 /// @param
@@ -258,14 +125,6 @@ void sobre_I(void)
         delay(200);
 
         alarmas = alarmas | 0b00000100;
-        regs[23] = alarmas;
-
-        // deshabilita interrupciones
-        //! detachInterrupt(digitalPinToInterrupt(PPS));
-        //!    timerDetachInterrupt(My_timer);
-
-        // apaga el GPS
-        digitalWrite(ON_GPS, LOW);
 
         Serial.println("\r\nEsperando atencion del operador...\r\n");
 
@@ -282,4 +141,38 @@ void sobre_I(void)
 #endif
         } while (true);
     }
+}
+
+void controlFuentes(float _referencia)
+{
+    static float fdoEscala;
+
+    if (digitalRead(VIN_DETECTADA))
+    {
+        digitalWrite(OUTVCCX, HIGH);
+    }
+    else
+    {
+        digitalWrite(OUTVCCX, LOW);
+    }
+
+    switch (modo_funcionamiento)
+    {
+    case MODO_I_CTE:
+        fdoEscala = ER_Icc * 10;
+        break;
+    case MODO_P_CTE:
+        fdoEscala = 3000;
+        break;
+    case MODO_M_ELE:
+        fdoEscala = 100;
+        break;
+    case MODO_V_CTE:
+        fdoEscala = ER_Vcc * 10;
+        break;
+    default:
+        break;
+    }
+
+    fija_Angulo(255 / fdoEscala * _referencia);
 }

@@ -9,11 +9,6 @@ void configuraInterrupciones(void);
 //void IRAM_ATTR swaPresionado();
 //void IRAM_ATTR swPresionado();
 
-void IRAM_ATTR cx0on();
-void IRAM_ATTR onTimer_Ty();
-
-void IRAM_ATTR pps();
-void IRAM_ATTR onTimer_1s();
-void IRAM_ATTR onTimer();
+void IRAM_ATTR vin_Off();
 
 #endif // __INTERRUPCIONES_H__
