@@ -64,20 +64,10 @@ float mide(int _canal, int _veces)
 /// @warning //! IMPORTANTE: asegurar la cantidad de muestreos para promediar ('n'),
 //!             que correspondan a 10mSeg o multiplo de 10mSeg
 
-void mideTodo(void)
+void midePotencial(void)
 {
     uint32_t millisAnt;
     float auxPot = Pot;
-
-    // digitalWrite(LED_DEBUG2, HIGH);
-    //   mide canal 1 y promedia n veces
-    Vcc = mide(1, 435) * 0.04544; // 0.02272;
-    // digitalWrite(LED_DEBUG2, LOW);
-
-    // digitalWrite(LED_DEBUG2, HIGH);
-    //  mide canal 2 y promedia n veces
-    Icc = mide(2, 435) * 0.0225;
-    // digitalWrite(LED_DEBUG2, LOW);
 
     millisAnt = millis();
     digitalWrite(LED_DEBUG2, HIGH);
@@ -90,7 +80,21 @@ void mideTodo(void)
     {
         Pot = (2048 - auxPot) * 2;
     }
+}
+void mideTodo(void)
+{
+    // digitalWrite(LED_DEBUG2, HIGH);
+    //   mide canal 1 y promedia n veces
+    Vcc = mide(1, 435) * 0.04544; // 0.02272;
+    // digitalWrite(LED_DEBUG2, LOW);
 
+    // digitalWrite(LED_DEBUG2, HIGH);
+    //  mide canal 2 y promedia n veces
+    Icc = mide(2, 435) * 0.0225;
+    // digitalWrite(LED_DEBUG2, LOW);
+
+    midePotencial();
+    
     // digitalWrite(LED_DEBUG2, HIGH);
     //  mide canal 4 y promedia n veces
     Vca = mide(4, 435) * 0.0625;

@@ -11,7 +11,7 @@ Preferences pref;
 unsigned int claveFabricante = 1111;
 
 /// @brief guarda clave fijada en 'claveFabricante'
-/// @param  
+/// @param
 void guardaNVS_Claves(void)
 {
     pref.begin("claves", false);
@@ -66,14 +66,19 @@ void leeNVS_Caracteristicas(void)
     delay(200);
 }
 
+/// @brief Si el modo de funcionamiento NO es Despolarización, guarda en memoria.
+/// @param  
 void guardaNVS_EstadoER(void)
 {
-    pref.begin("estado", false);
+    if (modo_funcionamiento != MODO_DESPO)
+    {
+        pref.begin("estado", false);
 
-    pref.putFloat("ref", referencia);
-    pref.putUInt("modo", modo_funcionamiento);
+        pref.putFloat("ref", referencia);
+        pref.putUInt("modo", modo_funcionamiento);
 
-    pref.end();
+        pref.end();
+    }
 }
 
 void leeNVS_EstadoER(void)
@@ -118,7 +123,7 @@ bool leeNVS_Primer_Ensayo(void)
     {
         return 1;
     }
-    else 
+    else
     {
         return 0;
     }

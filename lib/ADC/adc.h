@@ -11,6 +11,7 @@
 
 int read_adc(int channel);
 float mide(int _canal, int _veces);
+void midePotencial(void);
 void mideTodo(void);
 void analizaAlarmas(void);
 //int readADCPrueba(int channel);

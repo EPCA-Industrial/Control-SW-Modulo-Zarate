@@ -59,12 +59,6 @@ String Pant_Contsenias[4] = {
     "Fabricante      ",
     "Salir           "};
 
-/* String Pant_ER_Mod[4] = {
-    "      TIPO      ",
-    "Equipo          ",
-    "Modulo          ",
-    "Salir           "}; */
-
 String Pant_Fabricante[10] = {
     "CARACTERISTICAS ",
     "Nro. de Serie   ",
@@ -77,12 +71,19 @@ String Pant_Fabricante[10] = {
     "Nro. de modulo  ",
     "Salir           "};
 
-String Pant_ModoFto[5] = {
+String Pant_ModoFto[6] = {
     "      MODO      ",
     "Icc constante   ",
     "Pot constante   ",
     "Manual elect.   ",
-    "Vcc constante   "};
+    "Vcc constante   ",
+    "Despolarizacion "};
+
+String Pant_Despolarizacion[4] = {
+    "DESPOLARIZACION ",
+    "Tiempo          ",
+    "Potencial       ",
+    "Salir           "};
 
 String Pant_Operador_Inicio[4] = {
     "   CONFIGURA    ",
@@ -144,7 +145,7 @@ void configuraInicio(void)
 {
     uint8_t menu_Nromodulo = 0;
     uint8_t opcion_0 = 0;
-    //uint8_t opcion_01 = 0;
+    // uint8_t opcion_01 = 0;
     uint8_t opcion_02 = 0;
 
     char auxTxt[16];
@@ -191,22 +192,14 @@ void configuraInicio(void)
 
                 if (menu_Nromodulo == 1)
                 {
-                    EstableceAcentos(AcentosP_ModoFto);
-                    modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
-
-                    referencia = 0;
-
-                    guardaNVS_EstadoER();
-
-                    formateaReferencia();
-
-                    lcd.clear();
+                    eligeModoFuncionamiento();
                 }
                 else
                 {
                     lcd.clear();
                     digitos = 1;
                     num_modulo = encoder("# Mod.: ", num_modulo, 9, 1, 1, 180, 1, 4, 0);
+                    guardaNVS_Caracteristicas();
                 }
 
                 opcion_0 = 3; // para salir del menú superior
@@ -381,9 +374,9 @@ void AcentosP_Pant_ER_Mod(void)
 
 void AcentosP_ModoFto(void)
 {
-    if ((7 - Scroll) > 1 && (7 - Scroll) < 5)
+    if ((6 - Scroll) > 1 && (6 - Scroll) < 5)
     {
-        lcd_print_Posicion(15, 7 - Scroll, "");
+        lcd_print_Posicion(15, 6 - Scroll, "");
         lcd.write(4);
     }
 }
@@ -601,10 +594,14 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
 
         if (!configurando)
         {
-            mideTodo();
-            muestraMedicion(1, 4, estadoEnsayo);
             muestraReferencia(nombre, N / pow(10, _dec), co, fi);
-            controlFuentes(N / pow(10, _dec));
+            if (modo_funcionamiento != MODO_DESPO)
+            {
+                mideTodo();
+                muestraMedicion(1, 4, estadoEnsayo);
+
+                controlFuentes(N / pow(10, _dec));
+            }
         }
         else
         {
@@ -612,12 +609,9 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
             muestraReferencia(nombre, N, co, fi);
         }
 
-        if (modo_funcionamiento != MODO_INTER)
+        if (millis() > (t_ant + esperaEncoder))
         {
-            if (millis() > (t_ant + 5000))
-            {
-                break;
-            }
+            break;
         }
 
         if (!digitalRead(SW))
@@ -660,16 +654,7 @@ void menuEncoder(void)
 
     if (ajustar)
     {
-        EstableceAcentos(AcentosP_ModoFto);
-        modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
-
-        referencia = 0;
-
-        guardaNVS_EstadoER();
-
-        formateaReferencia();
-
-        lcd.clear();
+        eligeModoFuncionamiento();
     }
 
     num_Pantalla = 1;
@@ -738,9 +723,11 @@ void formateaReferencia(void)
         sensibilidad = 200;
 
         break;
-    case MODO_INTER:
-        break;
     case MODO_DESPO:
+        
+        digitos = 5;
+        dec = 0;
+
         break;
 
     default:
@@ -864,4 +851,44 @@ void referenciaEncoder(void)
         // delay(20);
         guardaNVS_EstadoER();
     }
+}
+
+void eligeModoFuncionamiento(void)
+{
+
+    uint8_t aux_modo = modo_funcionamiento;
+    float aux_refe = referencia;
+
+    EstableceAcentos(AcentosP_ModoFto);
+    modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
+
+    if (modo_funcionamiento == MODO_DESPO)
+    {
+        formateaReferencia();
+        eligeModoDespolarizacion();
+        
+        modo_funcionamiento = aux_modo;
+        referencia = aux_refe;
+    }
+    else
+    {
+        referencia = 0;
+    }
+
+    guardaNVS_EstadoER();
+
+    formateaReferencia();
+
+    lcd.clear();
+}
+
+void eligeModoDespolarizacion(void)
+{
+
+    uint8_t opcion = 0;
+
+    EstableceAcentos(Acentos_NO);
+    opcion = EligeOpcionMenu(1, Pant_Despolarizacion, sizeof(Pant_Despolarizacion) / sizeof(Pant_Despolarizacion[0]), 0, 1);
+
+    ensayoDespolarizacion(opcion);
 }

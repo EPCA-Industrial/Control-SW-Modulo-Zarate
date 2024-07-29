@@ -1,6 +1,6 @@
 #include "varFuncionamiento.h"
 
-const String VERSION = "V: 0.0.0";
+const String VERSION = "V: 1.0.0";
 
 HardwareSerial RS485_ext(2); // UART2, comunicación con el maestro
 
@@ -33,20 +33,6 @@ bool swa_presionado, swb_presionado, sw_presionado;
 
 const uint8_t cant_Registros = 11;
 
-// Variables para almacenar los valores de los registros
-uint16_t regs[cant_Registros] = {
-    /*00*/ num_modulo,
-    /*01*/ MODO_M_ELE,
-    /*02*/ 0, // Vcc
-    /*03*/ 0, // Icc
-    /*04*/ 0, // Pot
-    /*05*/ 0, // Temp
-    /*06*/ 0, // Ref
-    /*07*/ 0, // HsH
-    /*08*/ 0, // HsL
-    /*09*/ 0, // Estados
-    /*10*/ 0  // Alarmas
-};
 // Variables para definir registros de solo lectura
 const bool regs_lectura[cant_Registros] = {
     /*00*/ 0, // N° módulo
@@ -63,15 +49,16 @@ const bool regs_lectura[cant_Registros] = {
 };
 
 // Variables para almacenar mensaje recibido del rack
-int regs_entrantes[9] = {
+int regs_entrantes[10] = {
     /*00*/ 0, // Byte inicio '$'
     /*01*/ 0, // # módulo
     /*02*/ 0, // Esc/Lec
     /*03*/ 0, // Modo
-    /*04*/ 0, // Referencia H
-    /*05*/ 0, // Referencia L
-    /*06*/ 0, // Check Sum
-    /*07*/ 0 // Byte fin '*'
+    /*04*/ 0, // Referencia
+    /*05*/ 0, // Tiempo despolarización
+    /*06*/ 0, // Potencial despolarización
+    /*07*/ 0, // Check Sum
+    /*08*/ 0 // Byte fin '*'
 };
 
 // Variables globales para el cuenta horas
@@ -92,3 +79,10 @@ char cadena_a_enviar[50];
 
 // para indicar que entró un mensaje
 bool atender;
+
+// para la despolarización
+unsigned int despol_Tiempo;
+int despol_Potencial;
+
+// tiempo [mS] que espera la pulsación del encoder en 'encoder()'
+unsigned int esperaEncoder = 5000;

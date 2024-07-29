@@ -13,8 +13,10 @@
 #define MODO_P_CTE 2 // Potencial constante
 #define MODO_M_ELE 3 // Manual electrónico
 #define MODO_V_CTE 4 // Tensión constante
-#define MODO_INTER 5 // Interruptor
-#define MODO_DESPO 6 // Despolarización
+#define MODO_DESPO 5 // Despolarización
+
+#define DESP_TIEMPO 1 // Tiempo despolarización
+#define DESP_POTENC 2 // Potencial despolarización
 
 #define CAMBIO_MODO_FUNCIONAMIENTO 1 // registro modo de funcionamiento
 #define CAMBIO_REFERENCIA 9          // registro referencia
@@ -57,8 +59,7 @@ extern bool salida_OF;
 // Definir la dirección del esclavo Modbus
 extern const uint8_t SLAVE_ID;
 extern const uint8_t cant_Registros;
-// Variables para almacenar los valores de los registros
-extern uint16_t regs[];
+
 // Variables para definir registros de solo lectura
 extern const bool regs_lectura[];
 
@@ -84,5 +85,12 @@ extern char cadena_a_enviar[];
 
 // para indicar que entró un mensaje
 extern bool atender;
+
+// para la despolarización
+extern unsigned int despol_Tiempo;
+extern int despol_Potencial;
+
+// tiempo que espera la pulsación del encoder 'encoder()'
+extern unsigned int esperaEncoder;
 
 #endif // __VARFUNCIONAMIENTO_H__

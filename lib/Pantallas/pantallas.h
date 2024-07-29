@@ -25,6 +25,8 @@ void formateaReferencia(void);
 void muestraReferencia(String etiqueta, float _ref, uint8_t _c, uint8_t _f);
 void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est);
 bool valida_Clave(void);
+void eligeModoFuncionamiento(void);
+void eligeModoDespolarizacion(void);
 
 void Acentos_NO(void);
 void AcentosP_Fabricante(void);

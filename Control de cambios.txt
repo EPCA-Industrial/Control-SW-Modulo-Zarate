@@ -7,3 +7,4 @@
 
 25-07-24
 commit VERSION = "V: 1.0.0"
+Empiezo a implementar la Despolarización.

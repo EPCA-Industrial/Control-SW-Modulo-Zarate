@@ -21,87 +21,35 @@ const float umbral_Icc_cuentaHs = 0.5; // umbral de corriente para acumular hora
 
 extern String msj_GPS;
 
-float valor = 9000;
-
-int seg_ant, seg_act;
-uint16_t contErrGPS = 0;
-
-/// @brief verifica que no se pierdan lecturas del GPS, comparando el segundo actual con el anterior + 1
-/// @param
-/// @return cont_ERR con la cantidad de errores desde que se conectó el GPS. Descartar los dos primeros
-uint16_t validaSegundoSiguiente(void)
-{
-    seg_act = msj_GPS.substring(10, 12).toInt();
-
-    if (seg_ant != 59)
-    {
-        if (seg_act != seg_ant + 1)
-        {
-            // Serial.printf("Error1: %s %i\n", msj_GPS, seg_act);
-            contErrGPS++;
-
-#ifdef COMPILAR_DEBUG
-            Serial.printf("\nErrores GPS: %i\n", contErrGPS);
-#endif
-        }
-        else
-        {
-#ifdef COMPILAR_DEBUG
-            Serial.printf("OK: %s %02i\r", msj_GPS, seg_act);
-#endif
-        }
-    }
-
-    else if (seg_act != 0)
-    {
-        // Serial.printf("Error2: %s %i\n", msj_GPS, seg_act);
-        contErrGPS++;
-
-#ifdef COMPILAR_DEBUG
-        Serial.printf("\nErrores: %i\n", contErrGPS);
-#endif
-    }
-    else
-    {
-#ifdef COMPILAR_DEBUG
-        Serial.printf("OK: %s %02i\r", msj_GPS, seg_act);
-#endif
-    }
-    seg_ant = seg_act;
-
-    return contErrGPS;
-}
+extern String txt_referencia;
 
 void ctaHoras(void)
 {
     unsigned long currentMillis = millis();
 
-    if (modo_funcionamiento != MODO_INTER)
+    if (Icc > umbral_Icc_cuentaHs) // Comprobar si está por encima del umbral
     {
-        if (Icc > umbral_Icc_cuentaHs) // Comprobar si está por encima del umbral
+        if (currentMillis - previousMillis >= interval)
         {
-            if (currentMillis - previousMillis >= interval)
-            {
-                previousMillis = currentMillis; // Actualizar el tiempo de referencia
-                hs_FuncL++;                     // Incrementar la variable de horas acumuladas
+            previousMillis = currentMillis; // Actualizar el tiempo de referencia
+            hs_FuncL++;                     // Incrementar la variable de horas acumuladas
 
-                guardaNVS_HsFunc();
-            }
+            guardaNVS_HsFunc();
+        }
 
-            if (hs_FuncL > 32767)
-            {
-                hs_FuncH++;
-                hs_FuncL = 0;
-            }
+        if (hs_FuncL > 32767)
+        {
+            hs_FuncH++;
+            hs_FuncL = 0;
+        }
 
 #ifdef COMPILAR_DEBUG
-            Serial.printf("Minutos acumulados: %i\r", hs_FuncL);
+        Serial.printf("Minutos acumulados: %i\r", hs_FuncL);
 #endif
-        }
-        else
-        {
-            previousMillis = currentMillis; // Resetear el tiempo de referencia si está por debajo del umbral
-        }
+    }
+    else
+    {
+        previousMillis = currentMillis; // Resetear el tiempo de referencia si está por debajo del umbral
     }
 }
 
@@ -175,4 +123,155 @@ void controlFuentes(float _referencia)
     }
 
     fija_Angulo(255 / fdoEscala * _referencia);
+}
+
+void ensayoDespolarizacion(uint8_t _ToP)
+{
+    char auxtxt[16];
+    esperaEncoder = 500;
+
+    uint8_t hs, ms;
+
+    lcd.clear();
+
+    switch (_ToP)
+    {
+    case 1:
+        txt_referencia = "' ";
+
+        lcd_print_Posicion(1, 1, "Tiempo          ");
+        lcd_print_Posicion(1, 2, "a alcanzar:     ");
+
+        do
+        {
+            despol_Tiempo = encoder("T: ", despol_Tiempo, 65500, 1, 10, 40, 4, 4, 0);
+            // delay(500);
+
+            hs = (int)((float)despol_Tiempo / 60);
+            ms = despol_Tiempo - hs * 60;
+
+            sprintf(auxtxt, "%4ihs %2i'", hs, ms);
+            lcd_print_Posicion(3, 4, auxtxt);
+
+        } while (digitalRead(SW));
+
+        despolarizacionxTiempo();
+
+        break;
+
+    case 2:
+        txt_referencia = "mV";
+
+        lcd_print_Posicion(1, 1, "Potencial       ");
+        lcd_print_Posicion(1, 2, "a alcanzar:     ");
+
+        despol_Potencial = -Pot;
+        do
+        {
+            despol_Potencial = encoder("P: -", despol_Potencial, 1500, 400, 10, 40, 4, 4, 0);
+            Serial.printf("%i\r", despol_Potencial);
+
+        } while (digitalRead(SW));
+
+        despol_Potencial = -despol_Potencial;
+
+        despolarizacionxPotencial();
+
+        break;
+
+    default:
+        break;
+    }
+
+    esperaEncoder = 5000;
+}
+
+void despolarizacionxTiempo(void)
+{
+    char aux_pot[16];
+    unsigned long cuentaMinutos = millis();
+    unsigned long despol_Tiempo_mS = despol_Tiempo * 60000;
+
+    Serial.println("Despolarizando x Tiempos");
+
+    lcd.clear();
+    lcd_print_Posicion(1, 1, "Despol. x Tiempo");
+
+    delay(500);
+    sprintf(aux_pot, "Tr:%05i'", despol_Tiempo);
+    lcd_print_Posicion(1, 3, aux_pot);
+
+    do
+    {
+#ifdef WDT_SI
+        // Resetea el WDT
+        esp_task_wdt_reset();
+#endif
+        midePotencial();
+
+        sprintf(aux_pot, "P: %4.0f", Pot);
+        lcd_print_Posicion(1, 4, aux_pot);
+
+        sprintf(aux_pot, "%05li'", (millis() - cuentaMinutos) / 60000);
+        lcd_print_Posicion(11, 3, aux_pot);
+
+        sprintf(aux_pot, "%6lis", (millis() - cuentaMinutos) / 1000);
+        lcd_print_Posicion(10, 4, aux_pot);
+
+    } while (digitalRead(SW) && (millis() - cuentaMinutos) < despol_Tiempo_mS);
+
+    despol_Potencial = Pot;
+
+    lcd_print_Posicion(11, 3, "      ");
+    lcd_print_Posicion(10, 4, "       ");
+    delay(500);
+
+    while (digitalRead(SW))
+        ;
+    delay(200);
+}
+
+void despolarizacionxPotencial(void)
+{
+    char aux_potp[17];
+    unsigned long cuentaMinutos = millis();
+
+    Serial.println("Despolarizando x Potencial");
+
+    lcd.clear();
+    lcd_print_Posicion(1, 1, "Despol. x Poten.");
+    delay(500);
+
+    sprintf(aux_potp, "Pr:%04imV", despol_Potencial);
+    lcd_print_Posicion(1, 3, aux_potp);
+
+    do
+    {
+#ifdef WDT_SI
+        // Resetea el WDT
+        esp_task_wdt_reset();
+#endif
+        midePotencial();
+
+        sprintf(aux_potp, "P: %4.0f", Pot);
+        lcd_print_Posicion(1, 4, aux_potp);
+
+        sprintf(aux_potp, "%05li'", (millis() - cuentaMinutos) / 60000);
+        lcd_print_Posicion(11, 3, aux_potp);
+
+        sprintf(aux_potp, "%6lis", (millis() - cuentaMinutos) / 1000);
+        lcd_print_Posicion(10, 4, aux_potp);
+
+    } while (digitalRead(SW) && (Pot < despol_Potencial));
+
+    despol_Tiempo = (millis() - cuentaMinutos) / 60000;
+
+    lcd_print_Posicion(11, 3, "      ");
+    sprintf(aux_potp, "Tr: %05i'      ", despol_Tiempo);
+    lcd_print_Posicion(1, 4, aux_potp);
+
+    delay(500);
+    while (digitalRead(SW))
+        ;
+    delay(200);
 }

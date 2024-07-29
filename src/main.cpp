@@ -26,7 +26,6 @@
 // Version                                      *
 // Version                                      *
 
-
 TaskHandle_t mi_comunicacion;
 
 // para formatear la referencia y guardar en NVS si cambió algún
@@ -183,10 +182,8 @@ void setup()
     // Volver a añadir la tarea al WDT
     esp_task_wdt_add(NULL);
     esp_task_wdt_add(mi_comunicacion);
-#ifdef WDT_SI
     // Resetea el WDT
     esp_task_wdt_reset();
-#endif
 #endif
 
     // formatea la referencia según el modo
@@ -212,18 +209,12 @@ void loop()
     // Resetea el WDT
     esp_task_wdt_reset();
 #endif
-    //prueba_PWM();
-
+    // prueba_PWM();
     mideTodo();
-
     analizaAlarmas();
-
     sobre_I();
-
     ctaHoras();
-
     controlFuentes(referencia);
-
     muestraMedicion(1, 4, estadoEnsayo);
 
     // suspendo la tarea mientras se opera el encoder
@@ -234,8 +225,6 @@ void loop()
 
     // habilito tarea
     vTaskResume(mi_comunicacion);
-
-    // delay(1000);
 }
 
 /* void debug(void)
