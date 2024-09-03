@@ -24,28 +24,31 @@
 // Version                                      *
 // Version  Definir en 'varFuncionamiento.cpp'  *
 // Version                                      *
-// Version                                      *
+// Version      PLACA 4005(Ctr-Tel-ER)          *
 
 TaskHandle_t mi_comunicacion;
 
 // para formatear la referencia y guardar en NVS si cambió algún
 uint8_t cambioAlgunReg = 0;
 
+bool despolariza = 0;
+
 static void func_com(void *pvParameters);
+
 // static void debug(void);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// @brief Atiende un ensaje entrante poniendo en la/s variable/s el valor recibido.
-/// @example ' $, #módulo, Esc/Lec, modo, referencia, estados, checkSum, * '
-/// @warning $, #módulo, Lec/Esc, ..., checkSum y * deben estar siempre incluidos.
+/// @example ' $ #módulo, Esc/Lec/Desp, modo, referencia ó Tiempo Despolarización, estados ó Potencial Despolarización, checkSum * '
+/// @warning $ #módulo, Lec/Esc/Desp, ..., checkSum y * deben estar siempre incluidos.
 /// @warning Las variables: modo, referencia y estados deben ser enviadas en ese orden;
 /// @warning si no se quiere cambiar alguna, se enviará en su lugar -1 salvo que esté después de la que se quiere cambiar.
-/// @example $, 2, 1, -1, 10, 12, * (no se envía 'estados' por estar después de la referencia que es el valor a establecer)
+/// @example $ 2, 1, -1, 10, 12 * (no se envía 'estados' por estar después de la referencia que es el valor a establecer)
 /// @example    ^  ^   ^   ^   ^
 /// @example    |  |   |   |   └ ckeckSum
 /// @example    |  |   |   └──── valor de la referencia a establecer
 /// @example    |  |   └──────── el modo no se cambia
-/// @example    |  └──────────── indica escritura de alguna variable
+/// @example    |  └──────────── indica escritura de alguna variable (= 0 Lee valores; = 1 escribe modo referncia estados; = 2 despolarización)
 /// @example    └─────────────── para el módulo #2
 /// @param pvParameters
 static void func_com(void *pvParameters)
@@ -57,23 +60,44 @@ static void func_com(void *pvParameters)
         esp_task_wdt_reset();
 #endif
 
-        if (atender != 1)
+        if (atender == 0)
         {
+            // mientras no entre un mensaje queda atento
             recibeYanalizaValores();
         }
         else
         {
             if (regs_entrantes[1] == num_modulo)
             {
-                if (regs_entrantes[2] == ESCRITURA)
+                delay(10);
+                switch (regs_entrantes[2])
                 {
+                case ESCRITURA:
                     if (regs_entrantes[3] != -1)
                     {
+                        referencia = 0;
                         modo_funcionamiento = regs_entrantes[3];
                     }
                     if (regs_entrantes[4] != -1)
                     {
-                        referencia = regs_entrantes[4];
+                        switch (modo_funcionamiento)
+                        {
+                        case 1:
+                            if (regs_entrantes[4] <= ER_Icc * 10)
+                            {
+                                referencia = regs_entrantes[4];
+                            }
+                            break;
+                        case 3:
+                            if (regs_entrantes[4] <= ER_Vcc * 10)
+                            {
+                                referencia = regs_entrantes[4];
+                            }
+                            break;
+                        default:
+                            referencia = regs_entrantes[4];
+                            break;
+                        }
                     }
 
                     formateaReferencia();
@@ -82,20 +106,32 @@ static void func_com(void *pvParameters)
                     envia_a_Maestro("Recibido Ok\n ");
 
                     Serial.println("Cambio la referencia y el modo");
-                }
-                else if (regs_entrantes[2] == LECTURA)
-                {
+                    Serial.println("Recibido Ok");
+                    break;
+
+                case LECTURA:
                     armaCadenaValores();
 
-                    digitalWrite(RS485_RW, HIGH);
-                    delay(100);
-                    RS485_ext.write(cadena_a_enviar);
-                    delay(100);
-                    digitalWrite(RS485_RW, LOW);
+                    envia_a_Maestro(cadena_a_enviar);
 
                     Serial.println("Valores enviados.");
+                    break;
+
+                case DESPOLAR:
+                    despolariza = 1;
+                    break;
+
+                default:
+                    break;
                 }
             }
+            //! ********************** BORRAR **************************
+            //! else if (regs_entrantes[1] == 2)
+            //!{
+            //!    envia_a_Maestro("$2,1,28,22,-3000,15,25,1,1,1,0,-2904* ");
+            //!    Serial.println("$2,1,28,22,-3000,15,25,1,1,1,0,-2904*");
+            //!}
+            //! ********************** BORRAR **************************
             atender = 0;
         }
     }
@@ -136,8 +172,18 @@ void setup()
     // esp_task_wdt_delete(mi_comunicacion);
 #endif
 
+    // Deshabilita el canal PWM asociado al pin BUILTIN_LED
+    ledcDetachPin(38);
+
+    //! en algunos ESP32 BUILTIN_LED = 38 y en otros BUILTIN_LED = 48
+    //! OJO en este caso se interfiere con SELPIN del SPI
+    // neopixelWrite(38, 0, 0, 0);
+
     // asigna y configura entradas/salidas
     configuraPines();
+
+    // deshabilita salida
+    digitalWrite(ENABLE_1, LOW);
 
     // apaga salida
     digitalWrite(DISP_INT, salida_OF);
@@ -177,6 +223,8 @@ void setup()
     configuraInicio();
     // Inicializa PWM
     configura_PWMs();
+    // asegura salida en cero
+    fija_Angulo(0);
 
 #ifdef WDT_SI
     // Volver a añadir la tarea al WDT
@@ -189,18 +237,16 @@ void setup()
     // formatea la referencia según el modo
     formateaReferencia();
 
-    configuraInterrupciones();
-
-    neopixelWrite(BUILTIN_LED, 0, 0, 0);
+    //! configuraInterrupciones();
 
     // habilito tarea
     vTaskResume(mi_comunicacion);
 
-    // enciende salida
-    digitalWrite(DISP_INT, salida_ON);
-    digitalWrite(LED_DEBUG1, HIGH);
-
-    controlFuentes(referencia);
+    // pone un ángulo mínimo para empezar
+    fija_Angulo(25);
+    delay(500);
+    // habilita salida
+    digitalWrite(ENABLE_1, HIGH);
 }
 
 void loop()
@@ -209,22 +255,34 @@ void loop()
     // Resetea el WDT
     esp_task_wdt_reset();
 #endif
+
     // prueba_PWM();
     mideTodo();
-    analizaAlarmas();
+    //! analizaAlarmas();
     sobre_I();
     ctaHoras();
-    controlFuentes(referencia);
+
+    delay(50);
+    corrige_PWM(referencia);
+
     muestraMedicion(1, 4, estadoEnsayo);
 
     // suspendo la tarea mientras se opera el encoder
     vTaskSuspend(mi_comunicacion);
 
+    esperaEncoder = 1000;
     referenciaEncoder();
+    esperaEncoder = 5000;
     menuEncoder();
 
     // habilito tarea
     vTaskResume(mi_comunicacion);
+
+    if (despolariza)
+    {
+        despolarizacionRemota();
+        despolariza = 0;
+    }
 }
 
 /* void debug(void)

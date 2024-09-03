@@ -11,19 +11,15 @@
 
 #define MODO_I_CTE 1 // Corriente constante
 #define MODO_P_CTE 2 // Potencial constante
-#define MODO_M_ELE 3 // Manual electrónico
-#define MODO_V_CTE 4 // Tensión constante
-#define MODO_DESPO 5 // Despolarización
+#define MODO_V_CTE 3 // Tensión constante
+#define MODO_DESPO 4 // Despolarización
 
 #define DESP_TIEMPO 1 // Tiempo despolarización
 #define DESP_POTENC 2 // Potencial despolarización
 
-#define CAMBIO_MODO_FUNCIONAMIENTO 1 // registro modo de funcionamiento
-#define CAMBIO_REFERENCIA 9          // registro referencia
-#define CAMBIO_TIPO_ENSAYO 12        // registro tipo de ensayo
-
 #define LECTURA 0
 #define ESCRITURA 1
+#define DESPOLAR 2
 
 extern const String VERSION;
 
@@ -37,13 +33,15 @@ extern uint8_t ER_Vcc;
 extern uint8_t Ciclos;
 extern uint8_t Fases;
 
-extern bool er_modulo; // 1 equipo; 2 módulo
 extern uint8_t num_modulo;
-extern float Imin;
+
+extern int chkSum;
 
 extern uint8_t modo_funcionamiento;
+extern uint8_t aux_modo;
 
 extern float referencia;
+extern float aux_refe;
 
 // número de pantalla a mostrar
 extern uint8_t num_Pantalla;
@@ -60,9 +58,6 @@ extern bool salida_OF;
 extern const uint8_t SLAVE_ID;
 extern const uint8_t cant_Registros;
 
-// Variables para definir registros de solo lectura
-extern const bool regs_lectura[];
-
 extern int regs_entrantes[];
 
 // Variables para el cuenta horas
@@ -71,12 +66,6 @@ extern uint16_t hs_FuncH, hs_FuncL;
 
 extern uint8_t estadoEnsayo;
 
-extern // para ejecutar o no la tarea 'mi_modbus'
-    bool tarea_mi_modbus_habilitada;
-
-// para contar cuantas marcas de 1" se perdieron
-extern uint8_t cont_faltaPPS;
-
 // registro de alarmas
 extern uint8_t alarmas;
 
@@ -84,7 +73,7 @@ extern uint8_t alarmas;
 extern char cadena_a_enviar[];
 
 // para indicar que entró un mensaje
-extern bool atender;
+extern uint8_t atender;
 
 // para la despolarización
 extern unsigned int despol_Tiempo;
@@ -92,5 +81,7 @@ extern int despol_Potencial;
 
 // tiempo que espera la pulsación del encoder 'encoder()'
 extern unsigned int esperaEncoder;
+
+extern int duty_cycle;
 
 #endif // __VARFUNCIONAMIENTO_H__

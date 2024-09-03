@@ -36,10 +36,8 @@ void guardaNVS_Caracteristicas(void)
 
     pref.putUInt("NSerie", NS);
     pref.putUInt("er_vca", ER_Vca);
-    pref.putBool("er_Mod", er_modulo);
     pref.putFloat("v_nom", ER_Vcc);
     pref.putFloat("i_nom", ER_Icc);
-    pref.putFloat("i_min", Imin);
     pref.putUInt("num_mod", num_modulo);
     pref.putUInt("er_Hz", Ciclos);
     pref.putUInt("er_fas", Fases);
@@ -53,10 +51,8 @@ void leeNVS_Caracteristicas(void)
 
     NS = pref.getUInt("NSerie");
     ER_Vca = pref.getUInt("er_vca");
-    er_modulo = pref.getBool("er_Mod");
     ER_Vcc = pref.getFloat("v_nom");
     ER_Icc = pref.getFloat("i_nom");
-    Imin = pref.getFloat("i_min");
     num_modulo = pref.getUInt("num_mod");
     Ciclos = pref.getUInt("er_Hz");
     Fases = pref.getUInt("er_fas");

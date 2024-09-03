@@ -1,3 +1,3 @@
 #include "varMedicion.h"
 
-float Vcc, Icc, Pot, Vca, VBat, Temp1;
+float Vcc, Icc, Pot, Temp1;

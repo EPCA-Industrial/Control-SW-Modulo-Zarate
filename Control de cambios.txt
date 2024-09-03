@@ -8,3 +8,18 @@
 25-07-24
 commit VERSION = "V: 1.0.0"
 Empiezo a implementar la Despolarización.
+
+29-07-24 
+commit Despolarizacion local funcionando. Falta despolarizacion remota
+SE PUEDE USAR HASTA ACÁ PARA CONTROLAR UNA PLACA CON DISPARO PARA TIRISTORES
+
+01-08-24
+-Empiezo con el control de la salida con la fuente SW 
+-Corrijo EstablecePines para la placa 4005(Ctr-Tel-ER)
+-Cambio variable VERSION = "V: 1.1.0" en varFuncionamiento.cpp
+
+05-08-24
+-Saco el modo manual-electrónico
+
+03-09-24
+-Commit VERSION = "V: 1.2.0 Comienzan las pruebas en el equipo"

@@ -13,7 +13,7 @@ void configuraInterrupciones(void)
     // deshabilita interrupción por cambio de flanco
     //  detachInterrupt(digitalPinToInterrupt(PPS));
 
-    attachInterrupt(digitalPinToInterrupt(VIN_DETECTADA), vin_Off, FALLING);
+    //attachInterrupt(digitalPinToInterrupt(VIN_DETECTADA), vin_Off, FALLING);
 
     // attachInterrupt(digitalPinToInterrupt(SW_A), swaPresionado, FALLING);
     //  attachInterrupt(digitalPinToInterrupt(SW_B), swbPresionado, FALLING);
@@ -36,7 +36,4 @@ void configuraInterrupciones(void)
     sw_presionado = true;
 }*/
 
-void IRAM_ATTR vin_Off()
-{
-    digitalWrite(OUTVCCX, LOW);
-}
+

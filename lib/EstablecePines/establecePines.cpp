@@ -9,7 +9,6 @@ void configuraPines(void)
     pinMode(SW, INPUT_PULLUP);
 
     pinMode(ENABLE_1, OUTPUT);
-    pinMode(ENABLE_2, OUTPUT);
 
     // buzzer
     pinMode(BUZZER, OUTPUT);
@@ -20,10 +19,7 @@ void configuraPines(void)
     pinMode(DATAIN, INPUT);
     pinMode(SPICLOCK, OUTPUT);
 
-    pinMode(OUTVCCX, OUTPUT);
-
     // entrada/salida libres
-    pinMode(VIN_DETECTADA, INPUT);
     pinMode(OUT_DIG_05, OUTPUT);
 
     // leds
@@ -35,7 +31,7 @@ void configuraPines(void)
 
     // Interruptor
     pinMode(DISP_INT, INPUT_PULLDOWN);
-
+    
     // RS485 R/W
     pinMode(RS485_RW, OUTPUT);
 

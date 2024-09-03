@@ -16,7 +16,7 @@ byte byteFin = 0x2A;    // '*'
 void ini_UARTs(void)
 {
     Serial.begin(115200);
-    RS485_ext.begin(19200, SERIAL_8N1, RX_UART2, TX_UART2);
+    RS485_ext.begin(115200, SERIAL_8N1, RX_UART2, TX_UART2);
 }
 
 String atiendeUart_2(void)
@@ -39,9 +39,9 @@ String atiendeUart_2(void)
 void envia_a_Maestro(String _msj)
 {
     digitalWrite(RS485_RW, HIGH);
-    delay(100);
+    delay(1);
     RS485_ext.write(Str_a_char(_msj));
-    delay(100);
+    delay(50);
     digitalWrite(RS485_RW, LOW);
 }
 
@@ -143,8 +143,10 @@ uint16_t check_Sum(void)
 
 void armaCadenaValores(void)
 {
+    chkSum = num_modulo + modo_funcionamiento + (int)(Vcc * 10) + (int)(Icc * 10) + (int)Pot + (int)Temp1 + (int)referencia + hs_FuncH + hs_FuncL + despol_Tiempo + despol_Potencial;
+
     // Crear una cadena con los valores separados por comas
-    sprintf(cadena_a_enviar, "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc * 10), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, estadoEnsayo, alarmas);
+    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc * 10), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial,chkSum);
 
     // Enviar la cadena por Serial1 (o cualquier UART configurada)
     Serial.print(cadena_a_enviar);

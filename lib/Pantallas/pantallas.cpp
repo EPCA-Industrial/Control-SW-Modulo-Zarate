@@ -8,6 +8,7 @@
 #include "varMedicion.h"
 #include "funciones.h"
 #include "adc.h"
+#include "PWMs.h"
 
 extern LiquidCrystal_I2C lcd;
 
@@ -59,7 +60,7 @@ String Pant_Contsenias[4] = {
     "Fabricante      ",
     "Salir           "};
 
-String Pant_Fabricante[10] = {
+String Pant_Fabricante[9] = {
     "CARACTERISTICAS ",
     "Nro. de Serie   ",
     "Tension entrada ",
@@ -67,15 +68,13 @@ String Pant_Fabricante[10] = {
     "Fases           ",
     "Tension salida  ",
     "Corrte. salida  ",
-    "Corrte. minima  ",
     "Nro. de modulo  ",
     "Salir           "};
 
-String Pant_ModoFto[6] = {
+String Pant_ModoFto[5] = {
     "      MODO      ",
     "Icc constante   ",
     "Pot constante   ",
-    "Manual elect.   ",
     "Vcc constante   ",
     "Despolarizacion "};
 
@@ -257,24 +256,20 @@ void configuraInicio(void)
                             ER_Icc = encoder("Icc: ", ER_Icc, 300, 1, 10, 180, 1, 4, 0);
 
                             break;
-                        case 7: // Corriente mínima
-                            digitos = 3;
-                            Imin = encoder("Imin: ", Imin, 300, 1, 10, 180, 1, 4, 1);
 
-                            break;
-                        case 8: // Número de módulo
+                        case 7: // Número de módulo
                             digitos = 1;
                             num_modulo = encoder("# Mod.: ", num_modulo, 9, 1, 1, 180, 1, 4, 0);
 
                             break;
-                        case 9: // sale
+                        case 8: // sale
                             // sale
                             break;
                         }
 
                         guardaNVS_Caracteristicas();
 
-                    } while (opcion_02 != 9);
+                    } while (opcion_02 != 8);
 
                     opcion_0 = 3; // para salir del menú superior
 
@@ -351,14 +346,10 @@ void AcentosP_Fabricante(void)
         lcd_print_Posicion(7, 6 - Scroll, "");
         lcd.write(4);
     }
+
     if ((8 - Scroll) > 1 && (8 - Scroll) < 5)
     {
         lcd_print_Posicion(11, 8 - Scroll, "");
-        lcd.write(3);
-    }
-    if ((9 - Scroll) > 1 && (9 - Scroll) < 5)
-    {
-        lcd_print_Posicion(11, 9 - Scroll, "");
         lcd.write(4);
     }
 }
@@ -374,9 +365,9 @@ void AcentosP_Pant_ER_Mod(void)
 
 void AcentosP_ModoFto(void)
 {
-    if ((6 - Scroll) > 1 && (6 - Scroll) < 5)
+    if ((5 - Scroll) > 1 && (5 - Scroll) < 5)
     {
-        lcd_print_Posicion(15, 6 - Scroll, "");
+        lcd_print_Posicion(15, 5 - Scroll, "");
         lcd.write(4);
     }
 }
@@ -578,10 +569,32 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
             if (cont > 15)
             {
                 inc = inc * mult;
-                if (inc > 1000)
+
+                if (configurando)
                 {
-                    inc = 1000;
+                    if (inc > 1000)
+                    {
+                        inc = 1000;
+                    }
                 }
+                else
+                {
+                    if (modo_funcionamiento == MODO_V_CTE || modo_funcionamiento == MODO_I_CTE)
+                    {
+                        if (inc > 10)
+                        {
+                            inc = 10;
+                        }
+                    }
+                    else
+                    {
+                        if (inc > 1000)
+                        {
+                            inc = 1000;
+                        }
+                    }
+                }
+
                 cont = 0;
             }
         }
@@ -595,13 +608,13 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
         if (!configurando)
         {
             muestraReferencia(nombre, N / pow(10, _dec), co, fi);
-            if (modo_funcionamiento != MODO_DESPO)
-            {
-                mideTodo();
-                muestraMedicion(1, 4, estadoEnsayo);
+            /*             if (modo_funcionamiento != MODO_DESPO)
+                        {
+                            mideTodo();
+                            muestraMedicion(1, 4, estadoEnsayo);
 
-                controlFuentes(N / pow(10, _dec));
-            }
+                            corrige_PWM(N / pow(10, _dec));
+                        } */
         }
         else
         {
@@ -655,6 +668,7 @@ void menuEncoder(void)
     if (ajustar)
     {
         eligeModoFuncionamiento();
+        ajustar = 0;
     }
 
     num_Pantalla = 1;
@@ -689,7 +703,7 @@ void formateaReferencia(void)
         maximo = 10 * ER_Icc;
         minimo = 1;
         multiplicador = 10;
-        sensibilidad = 200;
+        sensibilidad = 80;
 
         break;
 
@@ -700,19 +714,10 @@ void formateaReferencia(void)
         maximo = 3000;
         minimo = 100;
         multiplicador = 10;
-        sensibilidad = 250;
-
-        break;
-    case MODO_M_ELE:
-        txt_referencia = "%  ";
-        digitos = 2;
-        dec = 0;
-        maximo = 99;
-        minimo = 1;
-        multiplicador = 1;
         sensibilidad = 180;
 
         break;
+
     case MODO_V_CTE:
         txt_referencia = "V ";
         digitos = 4;
@@ -720,11 +725,11 @@ void formateaReferencia(void)
         maximo = 10 * ER_Vcc /*  * pow10(dec) */;
         minimo = 1;
         multiplicador = 10;
-        sensibilidad = 200;
+        sensibilidad = 80;
 
         break;
     case MODO_DESPO:
-        
+
         digitos = 5;
         dec = 0;
 
@@ -768,34 +773,49 @@ void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est)
         return;
     }
 
-    if ((muestra_ant + intervaloMuestreo) < millis())
-    {
-        if (pant == 1)
+    //    lcd_print_Posicion(0, 1, "        ");
+    muestraFloat("V: ", Vcc, 4, 1, 0, 0);
+    muestraFloat("I: ", Icc, 4, 1, 8, 0);
+    // borra atrás del potencial
+    lcd_print_Posicion(9, 2, "       ");
+    muestraFloat("P: ", Pot, 5, 0, 0, 1);
+
+    sprintf(bufferTxt, "Hs: %li", (unsigned long)hs_FuncH * 32767 + (unsigned long)hs_FuncL);
+    // lcd_print_Posicion(1, 1, "                ");
+    lcd_print_Posicion(1, 3, bufferTxt);
+
+    /*     if ((muestra_ant + intervaloMuestreo) < millis())
         {
-            lcd_print_Posicion(0, 1, "        ");
-            muestraFloat("V: ", Vcc, 4, 1, 0, 0);
-            muestraFloat("I: ", Icc, 4, 1, 8, 0);
-            // borra atrás del potencial
-            lcd_print_Posicion(9, 2, "       ");
-            muestraFloat("P: ", Pot, 5, 0, 0, 1);
+            if (pant == 1)
+            {
+                lcd_print_Posicion(0, 1, "        ");
+                muestraFloat("V: ", Vcc, 4, 1, 0, 0);
+                muestraFloat("I: ", Icc, 4, 1, 8, 0);
+                // borra atrás del potencial
+                lcd_print_Posicion(9, 2, "       ");
+                muestraFloat("P: ", Pot, 5, 0, 0, 1);
 
-            pant = 2;
-        }
-        else if (pant == 2)
-        {
-            // muestraFloat("Va: ", Vca, 3, 0, 0, 0);
-            lcd_print_Posicion(8, 1, "         ");
-            muestraFloat("Bt: ", VBat, 4, 1, 0, 0);
+                sprintf(bufferTxt, "Hs: %li", (unsigned long)hs_FuncH * 32767 + (unsigned long)hs_FuncL);
+                // lcd_print_Posicion(1, 1, "                ");
+                lcd_print_Posicion(1, 3, bufferTxt);
 
-            sprintf(bufferTxt, "Hs: %li", (unsigned long)hs_FuncH * 32767 + (unsigned long)hs_FuncL);
-            lcd_print_Posicion(1, 2, "        ");
-            lcd_print_Posicion(1, 2, bufferTxt);
+                pant = 2;
+            }
+            else if (pant == 2)
+            {
+                // muestraFloat("Va: ", Vca, 3, 0, 0, 0);
+                lcd_print_Posicion(1, 2, "                ");
+                // muestraFloat("Bt: ", VBat, 4, 1, 0, 0);
 
-            pant = 1;
-        }
+                sprintf(bufferTxt, "Hs: %li", (unsigned long)hs_FuncH * 32767 + (unsigned long)hs_FuncL);
+                lcd_print_Posicion(1, 1, "                ");
+                lcd_print_Posicion(1, 1, bufferTxt);
 
-        muestra_ant = millis();
-    }
+                pant = 1;
+            }
+
+            muestra_ant = millis();
+        } */
 }
 
 /// @brief ingresa clave y la compara con la guardad en NVS
@@ -855,9 +875,8 @@ void referenciaEncoder(void)
 
 void eligeModoFuncionamiento(void)
 {
-
-    uint8_t aux_modo = modo_funcionamiento;
-    float aux_refe = referencia;
+    aux_modo = modo_funcionamiento;
+    aux_refe = referencia;
 
     EstableceAcentos(AcentosP_ModoFto);
     modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
@@ -866,13 +885,15 @@ void eligeModoFuncionamiento(void)
     {
         formateaReferencia();
         eligeModoDespolarizacion();
-        
+
         modo_funcionamiento = aux_modo;
         referencia = aux_refe;
     }
     else
     {
-        referencia = 0;
+        referencia = 0; 
+        duty_cycle = 1;
+        fija_Angulo(duty_cycle);
     }
 
     guardaNVS_EstadoER();

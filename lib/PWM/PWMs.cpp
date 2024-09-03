@@ -3,6 +3,8 @@
 #include "establecePines.h"
 #include "display16x2.h"
 #include "LiquidCrystal_I2C.h"
+#include "varFuncionamiento.h"
+#include "varMedicion.h"
 
 extern LiquidCrystal_I2C lcd;
 
@@ -10,7 +12,7 @@ extern LiquidCrystal_I2C lcd;
 #define LEDC_TIMER_BITS 8
 
 // Frecuencia base del PWM
-#define LEDC_BASE_FREQ 40000
+#define LEDC_BASE_FREQ 120000
 
 #define PWM_CANAL_0 0
 #define PWM_CANAL_1 1
@@ -60,9 +62,9 @@ void ledcAnalogWrite(uint8_t canal, uint32_t valor, uint32_t valorMax = 255)
 
 void prueba_PWM(void)
 {
-    // set the angulo on LEDC 
+    // set the angulo on LEDC
     ledcAnalogWrite(PWM_CANAL_0, ang_pwm);
-    //ledcAnalogWrite(PWM_CANAL_1, ang_pwm);
+    ledcAnalogWrite(PWM_CANAL_1, ang_pwm);
 
     // cambia el angulo la próxima entrada al bucle:
     ang_pwm = ang_pwm + fadeAmount;
@@ -77,4 +79,70 @@ void prueba_PWM(void)
 void fija_Angulo(int _angulo)
 {
     ledcWrite(PWM_CANAL_1, _angulo);
+}
+
+/// @brief Ajusta el ángulo del disparo para tiristores
+/// @param _ref
+/// @return
+void corrige_PWM(float _ref)
+{
+    int incremento = 0;
+
+    switch (modo_funcionamiento)
+    {
+    case MODO_I_CTE:
+        _ref = _ref / 10;
+
+        if (_ref > Icc * 1.01)
+        {
+            duty_cycle = duty_cycle + 1;
+        }
+        else if (_ref < Icc * 0.99)
+        {
+            duty_cycle = duty_cycle - 1;
+        }
+
+        //incremento = (int)(255 * (_ref - Icc) / ER_Icc);
+
+        break;
+    case MODO_P_CTE:
+        incremento = (int)(255 * (_ref + Pot) / 6000);
+
+        break;
+    case MODO_V_CTE:
+        _ref = _ref / 10;
+
+        if (_ref > Vcc * 1.01)
+        {
+            duty_cycle = duty_cycle + 1;
+        }
+        else if (_ref < Vcc * 0.99)
+        {
+            duty_cycle = duty_cycle - 1;
+        }
+
+        //incremento = (int)(255 * (_ref - Vcc) / ER_Vcc);
+
+        break;
+    default:
+        break;
+    }
+
+    //duty_cycle = duty_cycle + incremento;
+
+    if (duty_cycle > 255)
+    {
+        duty_cycle = 255;
+    }
+
+    if (duty_cycle < 1)
+    {
+        duty_cycle = 1;
+    }
+
+    fija_Angulo(duty_cycle);
+
+#ifdef COMPILAR_DEBUG
+// Serial.printf("V: %5.2f I: %5.2f P: %05.0f Ref: %5.2f TMR: %05u\r", Vcc, Icc, Pot, _ref, (uint64_t)valor);
+#endif
 }

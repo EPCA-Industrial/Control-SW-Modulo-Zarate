@@ -85,24 +85,17 @@ void mideTodo(void)
 {
     // digitalWrite(LED_DEBUG2, HIGH);
     //   mide canal 1 y promedia n veces
-    Vcc = mide(1, 435) * 0.04544; // 0.02272;
+    Vcc = mide(1, 435) * 0.0125;
     // digitalWrite(LED_DEBUG2, LOW);
 
     // digitalWrite(LED_DEBUG2, HIGH);
     //  mide canal 2 y promedia n veces
-    Icc = mide(2, 435) * 0.0225;
+    //Icc = mide(2, 435) * 0.0028;
+    Icc = mide(2, 435) * 0.00568;
+    
     // digitalWrite(LED_DEBUG2, LOW);
 
     midePotencial();
-    
-    // digitalWrite(LED_DEBUG2, HIGH);
-    //  mide canal 4 y promedia n veces
-    Vca = mide(4, 435) * 0.0625;
-    // digitalWrite(LED_DEBUG2, LOW);
-
-    Vca = Vca + (220 - Vca) * 0.26;
-    // mide canal 5 y promedia n veces
-    VBat = mide(5, 10) / 280;
 
     // mide canal 6 y promedia n veces
     Temp1 = (mide(6, 10) - 500) / 10;

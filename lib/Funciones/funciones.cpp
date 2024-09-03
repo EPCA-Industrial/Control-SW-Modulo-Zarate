@@ -89,40 +89,25 @@ void sobre_I(void)
 #endif
         } while (true);
     }
-}
-
-void controlFuentes(float _referencia)
-{
-    static float fdoEscala;
-
-    if (digitalRead(VIN_DETECTADA))
+    else if (Icc > ER_Icc * 1.1)
     {
-        digitalWrite(OUTVCCX, HIGH);
-    }
-    else
-    {
-        digitalWrite(OUTVCCX, LOW);
-    }
+        referencia = 0;
+        duty_cycle = 1;
+        fija_Angulo(duty_cycle);
 
-    switch (modo_funcionamiento)
-    {
-    case MODO_I_CTE:
-        fdoEscala = ER_Icc * 10;
-        break;
-    case MODO_P_CTE:
-        fdoEscala = 3000;
-        break;
-    case MODO_M_ELE:
-        fdoEscala = 100;
-        break;
-    case MODO_V_CTE:
-        fdoEscala = ER_Vcc * 10;
-        break;
-    default:
-        break;
-    }
+        lcd_print_Posicion(1, 1, "ADVERTENCIA!    ");
+        lcd_print_Posicion(1, 2, "Supera Corriente");
+        lcd_print_Posicion(1, 3, "Nominal.        ");
+        lcd_print_Posicion(1, 4, "Verifique       ");
 
-    fija_Angulo(255 / fdoEscala * _referencia);
+        uint8_t tout = 0;
+        do
+        {
+            pip(30);
+            delay(500);
+            tout++;
+        } while (digitalRead(SW) || tout > 120);
+    }
 }
 
 void ensayoDespolarizacion(uint8_t _ToP)
@@ -183,16 +168,21 @@ void ensayoDespolarizacion(uint8_t _ToP)
         break;
     }
 
-    esperaEncoder = 5000;
+    while (digitalRead(SW))
+        ;
+    delay(200);
+
+    esperaEncoder = 1000;
 }
 
 void despolarizacionxTiempo(void)
 {
-    char aux_pot[16];
+    char aux_pot[17];
     unsigned long cuentaMinutos = millis();
     unsigned long despol_Tiempo_mS = despol_Tiempo * 60000;
 
     Serial.println("Despolarizando x Tiempos");
+    Serial.println(despol_Tiempo);
 
     lcd.clear();
     lcd_print_Posicion(1, 1, "Despol. x Tiempo");
@@ -221,14 +211,10 @@ void despolarizacionxTiempo(void)
     } while (digitalRead(SW) && (millis() - cuentaMinutos) < despol_Tiempo_mS);
 
     despol_Potencial = Pot;
+    despol_Tiempo = 0;
 
     lcd_print_Posicion(11, 3, "      ");
     lcd_print_Posicion(10, 4, "       ");
-    delay(500);
-
-    while (digitalRead(SW))
-        ;
-    delay(200);
 }
 
 void despolarizacionxPotencial(void)
@@ -265,13 +251,51 @@ void despolarizacionxPotencial(void)
     } while (digitalRead(SW) && (Pot < despol_Potencial));
 
     despol_Tiempo = (millis() - cuentaMinutos) / 60000;
+    despol_Potencial = 0;
 
     lcd_print_Posicion(11, 3, "      ");
     sprintf(aux_potp, "Tr: %05i'      ", despol_Tiempo);
     lcd_print_Posicion(1, 4, aux_potp);
+}
 
-    delay(500);
-    while (digitalRead(SW))
-        ;
-    delay(200);
+void despolarizacionRemota(void)
+{
+    if (regs_entrantes[3] != -1 && regs_entrantes[4] == -1)
+    {
+        aux_modo = modo_funcionamiento;
+        aux_refe = referencia;
+
+        modo_funcionamiento = MODO_DESPO;
+        despol_Tiempo = regs_entrantes[3];
+
+        formateaReferencia();
+
+        despolarizacionxTiempo();
+        delay(3000);
+
+        lcd.clear();
+
+        modo_funcionamiento = aux_modo;
+        referencia = aux_refe;
+
+        formateaReferencia();
+    }
+    if (regs_entrantes[3] == -1 && regs_entrantes[4] != -1)
+    {
+        aux_modo = modo_funcionamiento;
+        aux_refe = referencia;
+
+        modo_funcionamiento = MODO_DESPO;
+        despol_Potencial = regs_entrantes[4];
+
+        despolarizacionxPotencial();
+        delay(3000);
+
+        lcd.clear();
+
+        modo_funcionamiento = aux_modo;
+        referencia = aux_refe;
+
+        formateaReferencia();
+    }
 }

@@ -6,9 +6,9 @@
 void ctaHoras(void);
 bool obtenerEstadoBit(uint8_t numero, uint8_t posicion);
 void sobre_I(void);
-void controlFuentes(float _referencia);
 void ensayoDespolarizacion(uint8_t _ToP);
 void despolarizacionxTiempo(void);
 void despolarizacionxPotencial(void);
+void despolarizacionRemota(void);
 
 #endif // __PWM_H__

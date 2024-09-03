@@ -5,8 +5,6 @@
 #define I2C_SCL 1 // Clock
 #define I2C_SDA 2 // SDA
 
-#define VIN_DETECTADA 4
-
 // Salida digital
 #define OUT_DIG_05 5 
 
@@ -18,15 +16,15 @@
 // buzzer
 #define BUZZER 48
 
-// RS485 R/W
-#define RS485_RW 9
-
 // Habilita/Deshabilita salida (Interruptor y Sobrecorriente)
 #define DISP_INT 8 
 
 // uart2 (RS485 - Tibbo - GPRS))
 #define TX_UART2 13
 #define RX_UART2 12
+
+// RS485 R/W
+#define RS485_RW 11
 
 // PWM
 #define PWM_pin18 18
@@ -37,11 +35,8 @@
 #define DATAOUT 37  // MOSI
 #define SELPIN 38   // Selección Pin
 
-// Habilitación todas las fuentes
-#define OUTVCCX 39
-// Habilitación por fuente
+// Habilitación de la salida
 #define ENABLE_1 46
-#define ENABLE_2 3
 
 #define LED_DEBUG2 40 // Led debug 2
 #define LED_DEBUG1 41 // Led debug 1
