@@ -12,7 +12,7 @@ extern LiquidCrystal_I2C lcd;
 #define LEDC_TIMER_BITS 8
 
 // Frecuencia base del PWM
-#define LEDC_BASE_FREQ 120000
+#define LEDC_BASE_FREQ 90000
 
 #define PWM_CANAL_0 0
 #define PWM_CANAL_1 1
@@ -130,14 +130,14 @@ void corrige_PWM(float _ref)
 
     //duty_cycle = duty_cycle + incremento;
 
-    if (duty_cycle > 255)
+    if (duty_cycle > 230)
     {
-        duty_cycle = 255;
+        duty_cycle = 230;
     }
 
-    if (duty_cycle < 1)
+    if (duty_cycle < 25)
     {
-        duty_cycle = 1;
+        duty_cycle = 25;
     }
 
     fija_Angulo(duty_cycle);

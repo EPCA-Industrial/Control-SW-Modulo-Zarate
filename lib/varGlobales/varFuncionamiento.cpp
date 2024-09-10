@@ -5,13 +5,8 @@ const String VERSION = "V: 1.2.0";
 HardwareSerial RS485_ext(2); // UART2, comunicación con el maestro
 
 // Valores nominales
-unsigned int NS;
-unsigned int ER_Vca;
 unsigned int ER_Icc;
 uint8_t ER_Vcc;
-uint8_t Ciclos;
-uint8_t Fases;
-
 uint8_t num_modulo;
 
 int chkSum;

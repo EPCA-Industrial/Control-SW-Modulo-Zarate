@@ -9,6 +9,7 @@
 #include "funciones.h"
 #include "adc.h"
 #include "PWMs.h"
+#include <esp_task_wdt.h>
 
 extern LiquidCrystal_I2C lcd;
 
@@ -36,6 +37,9 @@ extern uint8_t estadoEnsayo;
 extern bool bandEnsayoSinGPS;
 // extern ensayoOnOff ensayo1;
 
+unsigned long millis_ant = 0;
+const long intervalo_refresco = 5000; // Intervalo para reescribir en milisegundos (ej. cada 5 segundos)
+
 void (*Acentos_que_se_ejecutara)(void);
 
 void EstableceAcentos(void (*Acentos_a_Ejecutar)(void))
@@ -49,10 +53,10 @@ String Pant_Presentacion[3] = {
     "                "};
 
 String Pant_Caracteristicas[4] = {
-    "NS:        M:   ",
+    "M:              ",
     "Vc:     Ic:     ",
-    "Va:     Cs:     ",
-    "Fases:          "};
+    "                ",
+    "                "};
 
 String Pant_Contsenias[4] = {
     "    ACCESOS     ",
@@ -60,12 +64,8 @@ String Pant_Contsenias[4] = {
     "Fabricante      ",
     "Salir           "};
 
-String Pant_Fabricante[9] = {
+String Pant_Fabricante[5] = {
     "CARACTERISTICAS ",
-    "Nro. de Serie   ",
-    "Tension entrada ",
-    "Frecuencia      ",
-    "Fases           ",
     "Tension salida  ",
     "Corrte. salida  ",
     "Nro. de modulo  ",
@@ -118,26 +118,14 @@ void presentacion(void)
 
 void CargaValoresNominales(void)
 {
-    sprintf(AuxTxt, "%5u", NS);
-    lcd_print_Posicion(5, 1, AuxTxt);
+    sprintf(AuxTxt, "%u", num_modulo);
+    lcd_print_Posicion(4, 1, AuxTxt);
 
     sprintf(AuxTxt, "%3u", ER_Vcc);
     lcd_print_Posicion(5, 2, AuxTxt);
 
     sprintf(AuxTxt, "%3u", ER_Icc);
     lcd_print_Posicion(12, 2, AuxTxt);
-
-    sprintf(AuxTxt, "%3u", ER_Vca);
-    lcd_print_Posicion(5, 3, AuxTxt);
-
-    sprintf(AuxTxt, "%3u", Ciclos);
-    lcd_print_Posicion(12, 3, AuxTxt);
-
-    sprintf(AuxTxt, "%2u", Fases);
-    lcd_print_Posicion(7, 4, AuxTxt);
-
-    sprintf(AuxTxt, "%u", num_modulo);
-    lcd_print_Posicion(14, 1, AuxTxt);
 }
 
 void configuraInicio(void)
@@ -183,6 +171,10 @@ void configuraInicio(void)
 
         do
         {
+#ifdef WDT_SI
+            // Resetea el WDT
+            esp_task_wdt_reset();
+#endif
             switch (opcion_0)
             {
             case OPERADOR: // Menú operador
@@ -212,7 +204,7 @@ void configuraInicio(void)
                 maximo = 9999;
                 minimo = 1;
                 multiplicador = 1;
-                sensibilidad = 80;
+                sensibilidad = 10;
 
                 if (valida_Clave())
                 {
@@ -225,51 +217,30 @@ void configuraInicio(void)
 
                         switch (opcion_02)
                         {
-                        case 1: // Número de serie
-                            digitos = 5;
-                            NS = encoder("NS: ", NS, 40000, 20000, 10, 50, 1, 4, 0);
-
-                            break;
-                        case 2: // Tensión de entrada
-                            digitos = 3;
-                            ER_Vca = encoder("Vca: ", ER_Vca, 2000, 50, 10, 80, 1, 4, 0);
-
-                            break;
-                        case 3: // Frecuencia
-                            digitos = 2;
-                            Ciclos = encoder("Hz: ", Ciclos, 60, 50, 1, 180, 1, 4, 0);
-
-                            break;
-                        case 4: // Fases
-                            digitos = 1;
-                            Fases = encoder("Fases: ", Fases, 6, 1, 1, 180, 1, 4, 0);
-
-                            break;
-
-                        case 5: // Tensión de salida
+                        case 1: // Tensión de salida
                             digitos = 3;
                             ER_Vcc = encoder("Vcc: ", ER_Vcc, 300, 1, 10, 180, 1, 4, 0);
 
                             break;
-                        case 6: // Corriente de salida
+                        case 2: // Corriente de salida
                             digitos = 3;
                             ER_Icc = encoder("Icc: ", ER_Icc, 300, 1, 10, 180, 1, 4, 0);
 
                             break;
 
-                        case 7: // Número de módulo
+                        case 3: // Número de módulo
                             digitos = 1;
                             num_modulo = encoder("# Mod.: ", num_modulo, 9, 1, 1, 180, 1, 4, 0);
 
                             break;
-                        case 8: // sale
+                        case 4: // sale
                             // sale
                             break;
                         }
 
                         guardaNVS_Caracteristicas();
 
-                    } while (opcion_02 != 8);
+                    } while (opcion_02 != 4);
 
                     opcion_0 = 3; // para salir del menú superior
 
@@ -330,26 +301,15 @@ void Acentos_NO(void)
 
 void AcentosP_Fabricante(void)
 {
-    if ((3 - Scroll) > 1 && (3 - Scroll) < 5)
+    if ((2 - Scroll) > 1 && (2 - Scroll) < 5)
     {
-        lcd_print_Posicion(7, 3 - Scroll, "");
-        // lcd.setCursor(9, 2 - Scroll);
-        lcd.write(4);
-    }
-    /*     if ((6 - Scroll) > 1 && (6 - Scroll) < 5)
-        {
-            lcd_print_Posicion(12, 6 - Scroll, "");
-            lcd.write(4);
-        } */
-    if ((6 - Scroll) > 1 && (6 - Scroll) < 5)
-    {
-        lcd_print_Posicion(7, 6 - Scroll, "");
+        lcd_print_Posicion(7, 2 - Scroll, "");
         lcd.write(4);
     }
 
-    if ((8 - Scroll) > 1 && (8 - Scroll) < 5)
+    if ((4 - Scroll) > 1 && (4 - Scroll) < 5)
     {
-        lcd_print_Posicion(11, 8 - Scroll, "");
+        lcd_print_Posicion(11, 4 - Scroll, "");
         lcd.write(4);
     }
 }
@@ -540,8 +500,6 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
 
         ValAct = digitalRead(SW_A) + digitalRead(SW_B) * 2; // Aislamos encoder como un número de 2 bits y se carga en la variable 'ValAct'.
 
-        t_act = millis();
-
         if ((ValAnt == 3) && (ValAct == 2))
         { // Si en la comparación hay flanco de subida,
             t_ant = millis();
@@ -562,11 +520,13 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
             }
         }
 
+        t_act = millis();
+
         if (t_act < (t_ant + senc))
         {
             cont++;
 
-            if (cont > 15)
+            if (cont > 100)
             {
                 inc = inc * mult;
 
@@ -744,7 +704,7 @@ void muestraReferencia(String etiqueta, float _ref, uint8_t _c, uint8_t _f)
 {
     char txt[16];
 
-    if (modo_funcionamiento == MODO_P_CTE)
+    if (modo_funcionamiento == MODO_P_CTE && !configurando)
     {
         etiqueta = "R:-";
     }
@@ -763,6 +723,15 @@ void muestraReferencia(String etiqueta, float _ref, uint8_t _c, uint8_t _f)
 void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est)
 {
     char bufferTxt[16];
+
+    unsigned long currentMillis = millis();
+
+    // Reescribir el display cada 'interval' milisegundos
+    if (currentMillis - millis_ant >= intervalo_refresco)
+    {
+        millis_ant = currentMillis;
+        inicializaDisplay();
+    }
 
     if (_est == 11)
     {
@@ -891,7 +860,7 @@ void eligeModoFuncionamiento(void)
     }
     else
     {
-        referencia = 0; 
+        referencia = 0;
         duty_cycle = 1;
         fija_Angulo(duty_cycle);
     }

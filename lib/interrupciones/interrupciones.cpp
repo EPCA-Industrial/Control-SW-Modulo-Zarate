@@ -13,12 +13,17 @@ void configuraInterrupciones(void)
     // deshabilita interrupción por cambio de flanco
     //  detachInterrupt(digitalPinToInterrupt(PPS));
 
-    //attachInterrupt(digitalPinToInterrupt(VIN_DETECTADA), vin_Off, FALLING);
+    attachInterrupt(digitalPinToInterrupt(8), interruptor, CHANGE);
 
     // attachInterrupt(digitalPinToInterrupt(SW_A), swaPresionado, FALLING);
     //  attachInterrupt(digitalPinToInterrupt(SW_B), swbPresionado, FALLING);
     //  attachInterrupt(digitalPinToInterrupt(SW), swPresionado, FALLING);
     /////////////////////////////////////////////////////////////
+}
+
+void IRAM_ATTR interruptor()
+{
+    digitalWrite(ENABLE_1,digitalRead(DISP_INT));
 }
 
 /* void IRAM_ATTR swbPresionado()

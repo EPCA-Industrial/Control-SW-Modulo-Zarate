@@ -9,6 +9,6 @@ void configuraInterrupciones(void);
 //void IRAM_ATTR swaPresionado();
 //void IRAM_ATTR swPresionado();
 
-void IRAM_ATTR vin_Off();
+void IRAM_ATTR interruptor();
 
 #endif // __INTERRUPCIONES_H__

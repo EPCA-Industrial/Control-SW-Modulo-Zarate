@@ -146,7 +146,7 @@ void armaCadenaValores(void)
     chkSum = num_modulo + modo_funcionamiento + (int)(Vcc * 10) + (int)(Icc * 10) + (int)Pot + (int)Temp1 + (int)referencia + hs_FuncH + hs_FuncL + despol_Tiempo + despol_Potencial;
 
     // Crear una cadena con los valores separados por comas
-    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc * 10), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial,chkSum);
+    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc * 10), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial, chkSum);
 
     // Enviar la cadena por Serial1 (o cualquier UART configurada)
     Serial.print(cadena_a_enviar);
@@ -224,17 +224,25 @@ void recibeYanalizaValores(void)
                 {
                     // Checksum válido, imprimir los valores
                     Serial.print("Valores recibidos correctamente: ");
-
-                    for (uint8_t c = 0; c <= (cantVariablesRecibidas); c++)
+                    if (values[0] == num_modulo)
                     {
-                        Serial.print(values[c]);
-                        Serial.print(", ");
+                        for (uint8_t c = 0; c <= (cantVariablesRecibidas); c++)
+                        {
+                            Serial.print(values[c]);
+                            Serial.print(", ");
 
-                        regs_entrantes[c + 1] = values[c];
+                            regs_entrantes[c + 1] = values[c];
+                        }
+                        Serial.println();
+
+                        atender = 1;
+                        Serial.println("Atendiendo");
                     }
-                    Serial.println();
-
-                    atender = 1;
+                    else
+                    {
+                        atender = 0;
+                        Serial.println("No es para este modulo");
+                    }
                 }
                 else
                 {

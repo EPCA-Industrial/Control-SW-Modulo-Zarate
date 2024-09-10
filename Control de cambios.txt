@@ -23,3 +23,12 @@ SE PUEDE USAR HASTA ACÁ PARA CONTROLAR UNA PLACA CON DISPARO PARA TIRISTORES
 
 03-09-24
 -Commit VERSION = "V: 1.2.0 Comienzan las pruebas en el equipo"
+-Habilito el WDT en el menú de inicio
+
+09-09-24
+-Arreglé interferncias entre módulos cuando uno transmite
+
+10-09-24
+-Commit VERSION = "V: 1.2.1"
+    Agregar:
+    Cuando el Rack superior avise que hay ensayo, fijar el PWM para que no regule

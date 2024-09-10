@@ -26,13 +26,8 @@ extern const String VERSION;
 extern HardwareSerial RS485_ext; // UART2, comunicación con el maestro
 
 // Valores nominales
-extern unsigned int NS;
-extern unsigned int ER_Vca;
 extern unsigned int ER_Icc;
 extern uint8_t ER_Vcc;
-extern uint8_t Ciclos;
-extern uint8_t Fases;
-
 extern uint8_t num_modulo;
 
 extern int chkSum;

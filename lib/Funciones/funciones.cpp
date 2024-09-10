@@ -70,6 +70,13 @@ void sobre_I(void)
     {
         digitalWrite(DISP_INT, salida_OF);
         digitalWrite(LED_DEBUG1, LOW);
+
+        referencia = 0;
+        duty_cycle = 1;
+        fija_Angulo(duty_cycle);
+
+        guardaNVS_EstadoER();
+
         delay(200);
 
         alarmas = alarmas | 0b00000100;
@@ -94,6 +101,8 @@ void sobre_I(void)
         referencia = 0;
         duty_cycle = 1;
         fija_Angulo(duty_cycle);
+
+        guardaNVS_EstadoER();
 
         lcd_print_Posicion(1, 1, "ADVERTENCIA!    ");
         lcd_print_Posicion(1, 2, "Supera Corriente");

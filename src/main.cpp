@@ -213,12 +213,6 @@ void setup()
 
     borraPantalla();
 
-#ifdef WDT_SI
-    // Desalimentar el WDT temporalmente mientras configura
-    esp_task_wdt_delete(NULL);
-    esp_task_wdt_delete(mi_comunicacion);
-#endif
-
     // espera 5" por configuración
     configuraInicio();
     // Inicializa PWM
@@ -226,23 +220,14 @@ void setup()
     // asegura salida en cero
     fija_Angulo(0);
 
-#ifdef WDT_SI
-    // Volver a añadir la tarea al WDT
-    esp_task_wdt_add(NULL);
-    esp_task_wdt_add(mi_comunicacion);
-    // Resetea el WDT
-    esp_task_wdt_reset();
-#endif
-
     // formatea la referencia según el modo
     formateaReferencia();
 
-    //! configuraInterrupciones();
+    configuraInterrupciones();
 
     // habilito tarea
     vTaskResume(mi_comunicacion);
 
-    // pone un ángulo mínimo para empezar
     fija_Angulo(25);
     delay(500);
     // habilita salida
