@@ -5,7 +5,6 @@
 void ini_UARTs(void);
 String atiendeUart_2(void);
 void envia_a_Maestro(String _msj);
-void envia_a_Modulos(String _msj);
 char *Str_a_char(String _str);
 bool atiendoPeticion(void);
 uint16_t check_Sum(void);

@@ -613,7 +613,7 @@ void menuEncoder(void)
         lcd.clear();
     }
 
-    tant = millis();
+/*     tant = millis();
     do
     {
         if (millis() > tant + 1000)
@@ -623,7 +623,7 @@ void menuEncoder(void)
             delay(1000);
             cta--;
         }
-    } while (!digitalRead(SW));
+    } while (!digitalRead(SW)); */
 
     if (ajustar)
     {

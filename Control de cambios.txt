@@ -32,3 +32,8 @@ SE PUEDE USAR HASTA ACÁ PARA CONTROLAR UNA PLACA CON DISPARO PARA TIRISTORES
 -Commit VERSION = "V: 1.2.1"
     Agregar:
     Cuando el Rack superior avise que hay ensayo, fijar el PWM para que no regule
+
+18-09-24
+- commit 'Version V1.3.0 Se cambia el conversor RS485-UART en los modulos'
+    Para que funcionen estos conversores se bajó la velocidad y se cambiaron los tiempos de conmutación
+    de la pata lectura/escritura

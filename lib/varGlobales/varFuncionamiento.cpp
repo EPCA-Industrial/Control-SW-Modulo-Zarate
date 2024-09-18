@@ -1,6 +1,6 @@
 #include "varFuncionamiento.h"
 
-const String VERSION = "V: 1.2.0";
+const String VERSION = "V: 1.3.0";
 
 HardwareSerial RS485_ext(2); // UART2, comunicación con el maestro
 

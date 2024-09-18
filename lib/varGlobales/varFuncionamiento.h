@@ -20,6 +20,7 @@
 #define LECTURA 0
 #define ESCRITURA 1
 #define DESPOLAR 2
+#define ENSAYO 9
 
 extern const String VERSION;
 

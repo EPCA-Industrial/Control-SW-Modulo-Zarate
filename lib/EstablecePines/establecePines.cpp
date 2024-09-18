@@ -30,7 +30,7 @@ void configuraPines(void)
     pinMode(PWM_pin18, OUTPUT);
 
     // Interruptor
-    pinMode(DISP_INT, INPUT_PULLDOWN);
+    pinMode(DISP_INT, INPUT_PULLUP);
     
     // RS485 R/W
     pinMode(RS485_RW, OUTPUT);

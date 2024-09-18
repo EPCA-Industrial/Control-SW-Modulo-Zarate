@@ -103,10 +103,11 @@ static void func_com(void *pvParameters)
                     formateaReferencia();
                     guardaNVS_EstadoER();
 
-                    envia_a_Maestro("Recibido Ok\n ");
+                    //!envia_a_Maestro("Recibido Ok\n ");
 
                     Serial.println("Cambio la referencia y el modo");
                     Serial.println("Recibido Ok");
+                    
                     break;
 
                 case LECTURA:
@@ -114,7 +115,7 @@ static void func_com(void *pvParameters)
 
                     envia_a_Maestro(cadena_a_enviar);
 
-                    Serial.println("Valores enviados.");
+                    //Serial.println("Valores enviados.");
                     break;
 
                 case DESPOLAR:
@@ -126,11 +127,21 @@ static void func_com(void *pvParameters)
                 }
             }
             //! ********************** BORRAR **************************
-            //! else if (regs_entrantes[1] == 2)
-            //!{
-            //!    envia_a_Maestro("$2,1,28,22,-3000,15,25,1,1,1,0,-2904* ");
-            //!    Serial.println("$2,1,28,22,-3000,15,25,1,1,1,0,-2904*");
-            //!}
+/*              else if (regs_entrantes[1] == 3)
+            {
+                envia_a_Maestro("$3,1,28,22,-3000,15,25,1,1,1,0,-2903* ");
+                //Serial.println("$3,1,28,22,-3000,15,25,1,1,1,0,-2903*");
+            }
+            else if (regs_entrantes[1] == 4)
+            {
+                envia_a_Maestro("$4,1,28,22,-3000,15,25,1,1,1,0,-2902* ");
+                //Serial.println("$4,1,28,22,-3000,15,25,1,1,1,0,-2902*");
+            }
+            else if (regs_entrantes[1] == 5)
+            {
+                envia_a_Maestro("$5,1,28,22,-3000,15,25,1,1,1,0,-2901* ");
+                //Serial.println("$3,1,28,22,-3000,15,25,1,1,1,0,-2901*");
+            } */
             //! ********************** BORRAR **************************
             atender = 0;
         }
@@ -232,10 +243,14 @@ void setup()
     delay(500);
     // habilita salida
     digitalWrite(ENABLE_1, HIGH);
+
+
+    digitalWrite(RS485_RW, HIGH);
 }
 
 void loop()
 {
+
 #ifdef WDT_SI
     // Resetea el WDT
     esp_task_wdt_reset();
@@ -248,7 +263,10 @@ void loop()
     ctaHoras();
 
     delay(50);
-    corrige_PWM(referencia);
+    if (digitalRead(ENABLE_1))
+    {
+        corrige_PWM(referencia);
+    }
 
     muestraMedicion(1, 4, estadoEnsayo);
 

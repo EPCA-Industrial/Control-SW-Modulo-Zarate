@@ -71,7 +71,7 @@ void sobre_I(void)
         digitalWrite(DISP_INT, salida_OF);
         digitalWrite(LED_DEBUG1, LOW);
 
-        referencia = 0;
+        //referencia = 0;
         duty_cycle = 1;
         fija_Angulo(duty_cycle);
 
@@ -99,7 +99,7 @@ void sobre_I(void)
     else if (Icc > ER_Icc * 1.1)
     {
         referencia = 0;
-        duty_cycle = 1;
+        duty_cycle = 25; //mínimo
         fija_Angulo(duty_cycle);
 
         guardaNVS_EstadoER();
@@ -115,7 +115,7 @@ void sobre_I(void)
             pip(30);
             delay(500);
             tout++;
-        } while (digitalRead(SW) || tout > 120);
+        } while (digitalRead(SW) && tout < 20);
     }
 }
 
@@ -289,7 +289,7 @@ void despolarizacionRemota(void)
 
         formateaReferencia();
     }
-    if (regs_entrantes[3] == -1 && regs_entrantes[4] != -1)
+    else if (regs_entrantes[3] == -1 && regs_entrantes[4] != -1)
     {
         aux_modo = modo_funcionamiento;
         aux_refe = referencia;
