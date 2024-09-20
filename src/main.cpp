@@ -35,6 +35,8 @@ bool despolariza = 0;
 
 static void func_com(void *pvParameters);
 
+extern LiquidCrystal_I2C lcd;
+
 // static void debug(void);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -103,11 +105,11 @@ static void func_com(void *pvParameters)
                     formateaReferencia();
                     guardaNVS_EstadoER();
 
-                    //!envia_a_Maestro("Recibido Ok\n ");
+                    //! envia_a_Maestro("Recibido Ok\n ");
 
                     Serial.println("Cambio la referencia y el modo");
                     Serial.println("Recibido Ok");
-                    
+
                     break;
 
                 case LECTURA:
@@ -115,7 +117,7 @@ static void func_com(void *pvParameters)
 
                     envia_a_Maestro(cadena_a_enviar);
 
-                    //Serial.println("Valores enviados.");
+                    // Serial.println("Valores enviados.");
                     break;
 
                 case DESPOLAR:
@@ -127,21 +129,21 @@ static void func_com(void *pvParameters)
                 }
             }
             //! ********************** BORRAR **************************
-/*              else if (regs_entrantes[1] == 3)
-            {
-                envia_a_Maestro("$3,1,28,22,-3000,15,25,1,1,1,0,-2903* ");
-                //Serial.println("$3,1,28,22,-3000,15,25,1,1,1,0,-2903*");
-            }
-            else if (regs_entrantes[1] == 4)
-            {
-                envia_a_Maestro("$4,1,28,22,-3000,15,25,1,1,1,0,-2902* ");
-                //Serial.println("$4,1,28,22,-3000,15,25,1,1,1,0,-2902*");
-            }
-            else if (regs_entrantes[1] == 5)
-            {
-                envia_a_Maestro("$5,1,28,22,-3000,15,25,1,1,1,0,-2901* ");
-                //Serial.println("$3,1,28,22,-3000,15,25,1,1,1,0,-2901*");
-            } */
+            /*              else if (regs_entrantes[1] == 3)
+                        {
+                            envia_a_Maestro("$3,1,28,22,-3000,15,25,1,1,1,0,-2903* ");
+                            //Serial.println("$3,1,28,22,-3000,15,25,1,1,1,0,-2903*");
+                        }
+                        else if (regs_entrantes[1] == 4)
+                        {
+                            envia_a_Maestro("$4,1,28,22,-3000,15,25,1,1,1,0,-2902* ");
+                            //Serial.println("$4,1,28,22,-3000,15,25,1,1,1,0,-2902*");
+                        }
+                        else if (regs_entrantes[1] == 5)
+                        {
+                            envia_a_Maestro("$5,1,28,22,-3000,15,25,1,1,1,0,-2901* ");
+                            //Serial.println("$3,1,28,22,-3000,15,25,1,1,1,0,-2901*");
+                        } */
             //! ********************** BORRAR **************************
             atender = 0;
         }
@@ -210,6 +212,7 @@ void setup()
 
     // inicia display y carga caracteres especiales
     inicializaDisplay();
+    lcd.backlight();
 
     // carga valores de la Non Volatile Storage
     leeNVS_claves();
@@ -244,8 +247,10 @@ void setup()
     // habilita salida
     digitalWrite(ENABLE_1, HIGH);
 
-
     digitalWrite(RS485_RW, HIGH);
+
+    lcd.backlight();
+    tiempo_inicio_Backligth = millis();
 }
 
 void loop()
@@ -255,6 +260,8 @@ void loop()
     // Resetea el WDT
     esp_task_wdt_reset();
 #endif
+
+    digitalWrite(ENABLE_1, digitalRead(DISP_INT));
 
     // prueba_PWM();
     mideTodo();
@@ -266,6 +273,11 @@ void loop()
     if (digitalRead(ENABLE_1))
     {
         corrige_PWM(referencia);
+    }
+
+    if (millis() > tiempo_inicio_Backligth + 60000)
+    {
+        apaga_luz_display();
     }
 
     muestraMedicion(1, 4, estadoEnsayo);

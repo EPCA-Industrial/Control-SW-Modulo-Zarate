@@ -18,7 +18,7 @@ void inicializaDisplay(void)
 {
     lcd.init();
     cargaCaracteres();
-    lcd.backlight();
+    //lcd.backlight();
 }
 
 /// @brief Carga caracteres especiales. Se imprimen con 'lcd.write(n)'

@@ -31,6 +31,9 @@ extern unsigned int ER_Icc;
 extern uint8_t ER_Vcc;
 extern uint8_t num_modulo;
 
+extern unsigned long tiempo_inicio_Backligth;
+extern bool estado_luz_display; //para inidicar si está encendida= 1 o no= 0
+
 extern int chkSum;
 
 extern uint8_t modo_funcionamiento;

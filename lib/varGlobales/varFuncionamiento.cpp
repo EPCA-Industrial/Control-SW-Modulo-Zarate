@@ -9,6 +9,9 @@ unsigned int ER_Icc;
 uint8_t ER_Vcc;
 uint8_t num_modulo;
 
+unsigned long tiempo_inicio_Backligth;
+bool estado_luz_display; //para inidicar si está encendida= 1 o no= 0
+
 int chkSum;
 
 uint8_t modo_funcionamiento = 0;

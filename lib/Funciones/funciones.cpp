@@ -71,7 +71,7 @@ void sobre_I(void)
         digitalWrite(DISP_INT, salida_OF);
         digitalWrite(LED_DEBUG1, LOW);
 
-        //referencia = 0;
+        // referencia = 0;
         duty_cycle = 1;
         fija_Angulo(duty_cycle);
 
@@ -99,7 +99,7 @@ void sobre_I(void)
     else if (Icc > ER_Icc * 1.1)
     {
         referencia = 0;
-        duty_cycle = 25; //mínimo
+        duty_cycle = 1; 
         fija_Angulo(duty_cycle);
 
         guardaNVS_EstadoER();
@@ -139,7 +139,7 @@ void ensayoDespolarizacion(uint8_t _ToP)
         do
         {
             despol_Tiempo = encoder("T: ", despol_Tiempo, 65500, 1, 10, 40, 4, 4, 0);
-            // delay(500);
+            //delay(200);
 
             hs = (int)((float)despol_Tiempo / 60);
             ms = despol_Tiempo - hs * 60;
@@ -148,6 +148,7 @@ void ensayoDespolarizacion(uint8_t _ToP)
             lcd_print_Posicion(3, 4, auxtxt);
 
         } while (digitalRead(SW));
+        delay(200);
 
         despolarizacionxTiempo();
 
@@ -166,6 +167,7 @@ void ensayoDespolarizacion(uint8_t _ToP)
             Serial.printf("%i\r", despol_Potencial);
 
         } while (digitalRead(SW));
+        delay(200);
 
         despol_Potencial = -despol_Potencial;
 
@@ -208,7 +210,7 @@ void despolarizacionxTiempo(void)
 #endif
         midePotencial();
 
-        sprintf(aux_pot, "P: %4.0f", Pot);
+        sprintf(aux_pot, "P: %5.0f", Pot);
         lcd_print_Posicion(1, 4, aux_pot);
 
         sprintf(aux_pot, "%05li'", (millis() - cuentaMinutos) / 60000);
@@ -248,7 +250,7 @@ void despolarizacionxPotencial(void)
 #endif
         midePotencial();
 
-        sprintf(aux_potp, "P: %4.0f", Pot);
+        sprintf(aux_potp, "P: %5.0f", Pot);
         lcd_print_Posicion(1, 4, aux_potp);
 
         sprintf(aux_potp, "%05li'", (millis() - cuentaMinutos) / 60000);

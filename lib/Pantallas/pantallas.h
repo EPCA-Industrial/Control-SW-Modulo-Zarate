@@ -9,6 +9,8 @@
 #define FABRICANTE 2
 
 void EstableceAcentos(void (*Acentos_a_Ejecutar)(void));
+void prende_luz_display(void);
+void apaga_luz_display(void);
 void CargaPantalla(String* PN);
 void presentacion(void);
 void CargaValoresNominales(void);

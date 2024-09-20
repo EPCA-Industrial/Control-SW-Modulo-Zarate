@@ -96,6 +96,19 @@ String Pant_EstadoON_OFF[4] = {
     "ON              ",
     "                "};
 
+void prende_luz_display(void)
+{
+    lcd.backlight();
+    estado_luz_display = 1;
+    tiempo_inicio_Backligth = millis();
+}
+
+void apaga_luz_display(void)
+{
+    lcd.noBacklight();
+    estado_luz_display = 0;
+}
+
 void CargaPantalla(String *PN)
 {
     // Carga la pantalla 'PN' definida en 'Pantallas.h'
@@ -592,7 +605,7 @@ float encoder(String nombre, float num, int max, int min, uint8_t mult, uint8_t 
             break;
         }
     }
-
+    prende_luz_display();
     delay(100);
     return (N / pow(10, _dec));
 }
@@ -609,21 +622,20 @@ void menuEncoder(void)
 
     if (!digitalRead(SW))
     {
-        ajustar = 1;
-        lcd.clear();
-    }
-
-/*     tant = millis();
-    do
-    {
-        if (millis() > tant + 1000)
+        if (!estado_luz_display)
         {
-            sprintf(auxTxt, "Resetea en: %i", cta);
-            lcd_print_Posicion(1, 2, auxTxt);
-            delay(1000);
-            cta--;
+            prende_luz_display();
+
+            while (!digitalRead(SW))
+                ;
+            return;
         }
-    } while (!digitalRead(SW)); */
+        else
+        {
+            ajustar = 1;
+            lcd.clear();
+        }
+    }
 
     if (ajustar)
     {
@@ -834,6 +846,8 @@ void referenciaEncoder(void)
 {
     if (!digitalRead(SW_A) || !digitalRead(SW_B))
     {
+        prende_luz_display();
+
         formateaReferencia();
 
         referencia = encoder("R: ", referencia, maximo, minimo, multiplicador, sensibilidad, 1, 4, 0);
@@ -844,8 +858,11 @@ void referenciaEncoder(void)
 
 void eligeModoFuncionamiento(void)
 {
-    aux_modo = modo_funcionamiento;
-    aux_refe = referencia;
+    if (modo_funcionamiento != MODO_DESPO)
+    {
+        aux_modo = modo_funcionamiento;
+        aux_refe = referencia;
+    }
 
     EstableceAcentos(AcentosP_ModoFto);
     modo_funcionamiento = EligeOpcionMenu(1, Pant_ModoFto, sizeof(Pant_ModoFto) / sizeof(Pant_ModoFto[0]), 0, 1);
@@ -857,6 +874,8 @@ void eligeModoFuncionamiento(void)
 
         modo_funcionamiento = aux_modo;
         referencia = aux_refe;
+
+        formateaReferencia();
     }
     else
     {
