@@ -106,7 +106,17 @@ void corrige_PWM(float _ref)
 
         break;
     case MODO_P_CTE:
-        incremento = (int)(255 * (_ref + Pot) / 6000);
+
+        //incremento = (int)(255 * (_ref + Pot) / 6000);
+
+        if (-_ref > Pot * 1.005)
+        {
+            duty_cycle = duty_cycle - 1;
+        }
+        else if (-_ref < Pot * 0.995)
+        {
+            duty_cycle = duty_cycle + 1;
+        }
 
         break;
     case MODO_V_CTE:
