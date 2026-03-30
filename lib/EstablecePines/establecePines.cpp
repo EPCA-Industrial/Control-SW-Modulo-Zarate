@@ -27,7 +27,7 @@ void configuraPines(void)
     pinMode(LED_DEBUG2, OUTPUT);
 
     // PWM
-    pinMode(PWM_pin18, OUTPUT);
+    pinMode(PWM_pin21, OUTPUT);
 
     // Interruptor
     pinMode(DISP_INT, INPUT_PULLUP);

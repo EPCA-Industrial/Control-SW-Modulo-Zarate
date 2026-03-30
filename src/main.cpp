@@ -66,6 +66,9 @@ static void func_com(void *pvParameters)
         {
             // mientras no entre un mensaje queda atento
             recibeYanalizaValores();
+            //IMPORTANTE: se agrega este delay para dar lugar al análisis de lo recibido.
+            delay(20);
+            //Serial.println("Esperando mensaje desde el Rack Superior\r");
         }
         else
         {
@@ -85,7 +88,7 @@ static void func_com(void *pvParameters)
                         switch (modo_funcionamiento)
                         {
                         case 1:
-                            if (regs_entrantes[4] <= ER_Icc * 10)
+                            if (regs_entrantes[4] <= ER_Icc)
                             {
                                 referencia = regs_entrantes[4];
                             }
@@ -196,7 +199,7 @@ void setup()
     configuraPines();
 
     // deshabilita salida
-    digitalWrite(ENABLE_1, LOW);
+    digitalWrite(ENABLE_1, HIGH);
 
     // apaga salida
     digitalWrite(DISP_INT, salida_OF);
@@ -245,9 +248,10 @@ void setup()
     fija_Angulo(25);
     delay(500);
     // habilita salida
-    digitalWrite(ENABLE_1, HIGH);
+    digitalWrite(ENABLE_1, LOW);
 
-    digitalWrite(RS485_RW, HIGH);
+//IMPORTANTE: Verificar el estado para Escritura/Lectura según converor RS485; acá y en las rutinas de escritura y lectura.
+    digitalWrite(RS485_RW, LOW);
 
     lcd.backlight();
     tiempo_inicio_Backligth = millis();
@@ -261,7 +265,7 @@ void loop()
     esp_task_wdt_reset();
 #endif
 
-    digitalWrite(ENABLE_1, digitalRead(DISP_INT));
+    digitalWrite(ENABLE_1, !digitalRead(DISP_INT));
 
     // prueba_PWM();
     mideTodo();

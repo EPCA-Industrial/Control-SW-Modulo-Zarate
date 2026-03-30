@@ -17,7 +17,7 @@ extern LiquidCrystal_I2C lcd;
 unsigned long previousMillis = 0;      // Tiempo de referencia para la temporización
 unsigned long interval = 3600000;      // Intervalo de tiempo en milisegundos (1 hora)
 int accumulatedSeconds = 0;            // Variable para acumular los segundos
-const float umbral_Icc_cuentaHs = 0.5; // umbral de corriente para acumular horas de funcionamiento
+const float umbral_Icc_cuentaHs = 1;   // umbral de corriente para acumular horas de funcionamiento
 
 extern String msj_GPS;
 

@@ -90,9 +90,12 @@ void mideTodo(void)
 
     // digitalWrite(LED_DEBUG2, HIGH);
     //  mide canal 2 y promedia n veces
+    //Icc = mide(2, 435) * 0.2841; //! para modulo 1A
+    //Icc = mide(2, 435) * 0.02841; //! para modulo 100mA
     Icc = mide(2, 435) * 0.0028; //! para shunt 10A
     //Icc = mide(2, 435) * 0.00568; //! para shunt 20A
-    
+
+    Icc = Icc * 1000; //! para convertir a mA
     // digitalWrite(LED_DEBUG2, LOW);
 
     midePotencial();

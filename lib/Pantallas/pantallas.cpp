@@ -237,7 +237,7 @@ void configuraInicio(void)
                             break;
                         case 2: // Corriente de salida
                             digitos = 3;
-                            ER_Icc = encoder("Icc: ", ER_Icc, 300, 1, 10, 180, 1, 4, 0);
+                            ER_Icc = encoder("Icc: ", ER_Icc, 2500, 1, 10, 180, 1, 4, 0);
 
                             break;
 
@@ -669,14 +669,25 @@ void formateaReferencia(void)
     switch (modo_funcionamiento)
     {
     case MODO_I_CTE:
+    //! VER LA ESCALA DEL MODULO
+/* // para módulo de 1A
         txt_referencia = "A ";
         digitos = 4;
         dec = 1;
         maximo = 10 * ER_Icc;
         minimo = 1;
         multiplicador = 10;
-        sensibilidad = 80;
-
+        sensibilidad = 80; */
+         
+// para módulo de 100mA
+        txt_referencia = "mA ";
+        digitos = 4;
+        dec = 0;
+        maximo = ER_Icc;
+        minimo = 1;
+        multiplicador = 10;
+        sensibilidad = 80; 
+        
         break;
 
     case MODO_P_CTE:
@@ -722,7 +733,11 @@ void muestraReferencia(String etiqueta, float _ref, uint8_t _c, uint8_t _f)
     }
     if (!configurando)
     {
-        if (modo_funcionamiento == MODO_I_CTE || modo_funcionamiento == MODO_V_CTE)
+/*         if (modo_funcionamiento == MODO_I_CTE || modo_funcionamiento == MODO_V_CTE)
+        {
+            _ref /= 10;
+        } */
+        if (modo_funcionamiento == MODO_V_CTE)
         {
             _ref /= 10;
         }
@@ -756,7 +771,7 @@ void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est)
 
     //    lcd_print_Posicion(0, 1, "        ");
     muestraFloat("V: ", Vcc, 4, 1, 0, 0);
-    muestraFloat("I: ", Icc, 4, 1, 8, 0);
+    muestraFloat("I: ", Icc, 4, 0, 8, 0);
     // borra atrás del potencial
     lcd_print_Posicion(9, 2, "       ");
     muestraFloat("P: ", Pot, 5, 0, 0, 1);

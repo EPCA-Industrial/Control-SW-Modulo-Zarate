@@ -23,7 +23,7 @@ void configuraInterrupciones(void)
 
 void IRAM_ATTR interruptor()
 {
-    digitalWrite(ENABLE_1,digitalRead(DISP_INT));
+    digitalWrite(ENABLE_1,!digitalRead(DISP_INT));
 }
 
 /* void IRAM_ATTR swbPresionado()

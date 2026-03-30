@@ -38,11 +38,11 @@ String atiendeUart_2(void)
 
 void envia_a_Maestro(String _msj)
 {
-    digitalWrite(RS485_RW, LOW);
+    digitalWrite(RS485_RW, HIGH);
     delay(1);
     RS485_ext.write(Str_a_char(_msj));
     delay(50);
-    digitalWrite(RS485_RW, HIGH);
+    digitalWrite(RS485_RW, LOW);
 }
 
 /// @brief Pasa un 'String' a 'char'
@@ -143,19 +143,43 @@ uint16_t check_Sum(void)
 
 void armaCadenaValores(void)
 {
-    chkSum = num_modulo + modo_funcionamiento + (int)(Vcc * 10) + (int)(Icc * 10) + (int)Pot + (int)Temp1 + (int)referencia + hs_FuncH + hs_FuncL + despol_Tiempo + despol_Potencial;
+    chkSum = num_modulo + modo_funcionamiento + (int)(Vcc * 10) + (int)(Icc) + (int)Pot + (int)Temp1 + (int)referencia + hs_FuncH + hs_FuncL + despol_Tiempo + despol_Potencial;
 
     // Crear una cadena con los valores separados por comas
-    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc * 10), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial, chkSum);
+    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial, chkSum);
 
     // Enviar la cadena por Serial1 (o cualquier UART configurada)
     Serial.print("Enviando: ");
     Serial.println(cadena_a_enviar);
 }
 
-/// @brief Sí el mensaje comienza con '$'; finaliza con '*' y chksum OK
-/// @brief deja los valores en regs_entrantes[]
-/// @param
+/**
+ * Función: recibeYanalizaValores()
+
+ * Descripción detallada:
+ * - La función se encarga de leer datos del puerto RS485_ext, esperando recibir válido para este módulo.
+ * - El mensaje debe comenzar con el carácter de inicio (byteInicio, '$') y terminar con el carácter de fin (byteFin, '*').
+ * - Durante la recepción:
+ *   • Se activa la bandera 'recibiendo' cuando se detecta el byte de inicio y se reinicia el contador 
+ *     de variables recibidas (cantVariablesRecibidas).
+ *   • Cada carácter recibido se analiza:
+ *       - Si es una coma (','), se asume que es un separador entre variables y se incrementa el contador.
+ *       - Los demás caracteres se van concatenando a la cadena 'receivedData'.
+ * - Al detectar el byte de fin ('*'), se finaliza la recepción y se establece la bandera 'endDetected'.
+ * - Una vez completada la recepción, si se detectó correctamente el inicio y se recibió información:
+ *   • Se muestra en la consola el mensaje completo recibido.
+ *   • Se convierte la cadena recibida en un array de caracteres para facilitar su análisis.
+ *   • Se utiliza la función strtok para separar la cadena en tokens usando la coma como delimitador.
+ *   • Cada token se convierte a entero y se almacena en el array 'values'.
+ * - Se extrae el checksum recibido (último valor en el array) y se calcula un checksum como la suma
+ *   de todos los valores anteriores.
+ * - Si el checksum calculado coincide con el recibido:
+ *   • Se verifica que el primer valor coincida con el identificador del módulo (num_modulo).
+ *   • Si es correcto, se copian los valores al arreglo global 'regs_entrantes' y se activa la bandera 'atender'
+ *     para el posterior análisis en 'func_com()' en el arcivo 'main.cpp'.
+ * - Si el checksum no coincide o la información recibida es inválida, se informa a través de mensajes en
+ *   el monitor serial.
+ */
 void recibeYanalizaValores(void)
 {
     bool recibiendo = false;
@@ -167,6 +191,9 @@ void recibeYanalizaValores(void)
     while (RS485_ext.available())
     {
         char byteRecibido = RS485_ext.read();
+        
+        //Muestra caracter por caracter recibido
+        //Serial.print(byteRecibido);
 
         if (byteRecibido == byteInicio)
         { // BYTE_INICIO '$'
@@ -195,8 +222,14 @@ void recibeYanalizaValores(void)
 
         if (endDetected)
         {
+            // Se ha recibido un mensaje completo
+            Serial.println("Se detectó el fin del mensaje $");
+
             if (startDetected && receivedData.length() > 0)
             {
+                Serial.println("startDetected = 1 y receivedData.length() > 0");
+                Serial.println(receivedData);
+
                 // Convertir la cadena a un array de caracteres (buffer)
                 char buffer[50];
                 receivedData.toCharArray(buffer, 50);
@@ -250,6 +283,9 @@ void recibeYanalizaValores(void)
                     // Checksum incorrecto
                     Serial.println("Error: checksum incorrecto");
                 }
+            }else
+            {
+                Serial.println("startDetected <> 1 ó receivedData.length() = 0");
             }
         }
     }

@@ -37,3 +37,19 @@ SE PUEDE USAR HASTA ACÁ PARA CONTROLAR UNA PLACA CON DISPARO PARA TIRISTORES
 - commit 'Version V1.3.0 Se cambia el conversor RS485-UART en los modulos'
     Para que funcionen estos conversores se bajó la velocidad y se cambiaron los tiempos de conmutación
     de la pata lectura/escritura
+
+26-09-24
+-Corrijo error en el Modo Potencial Constante (no funcionaba) los equipos de Millicic se fueron
+    sin funcionar en este modo. No se probaron correctamente los equipos
+
+27-09-24
+-Commit 'Se corrige Modo Pot Cte'
+
+17-03-25
+- Se ajusta la frecuencia del PWM porque se cambió el hardware para regular corrientes de hasta 1A
+- Se cambia el factor de la corriente
+- Se cambian los límites inferior del PWM (duty_cycle)
+- En armaCadenaValores() se cambia 'Icc * 10' por 'Icc', porque al estar en mA, no hacen falta los decimales.
+- En 'funciones.cpp' se cambia el 'umbral_Icc_cuentaHs' a 1mA.
+- OJO! se agregó en 'func_com()' un 'delay(20)' entre 'recibeYanalizaValores()' porque el tiempo entre los
+       mensajes entrantes no era suficiente para analizarlos.

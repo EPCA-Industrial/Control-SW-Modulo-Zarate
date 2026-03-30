@@ -12,7 +12,9 @@ extern LiquidCrystal_I2C lcd;
 #define LEDC_TIMER_BITS 8
 
 // Frecuencia base del PWM
-#define LEDC_BASE_FREQ 90000
+//#define LEDC_BASE_FREQ 90000
+// Se redefine la frecuencia por cambio de escala de corriente que modificó el hardware
+#define LEDC_BASE_FREQ 100000
 
 #define PWM_CANAL_0 0
 #define PWM_CANAL_1 1
@@ -25,7 +27,7 @@ void configura_PWMs(void)
     // ledcWrite(PWM_CANAL_0, 0);
     // ledcWrite(PWM_CANAL_1, 0);
     configura_PWM(LED_DEBUG2, PWM_CANAL_0);
-    configura_PWM(PWM_pin18, PWM_CANAL_1);
+    configura_PWM(PWM_pin21, PWM_CANAL_1);
 }
 
 void configura_PWM(uint8_t pin, uint8_t canal)
@@ -86,12 +88,12 @@ void fija_Angulo(int _angulo)
 /// @return
 void corrige_PWM(float _ref)
 {
-    int incremento = 0;
+    //int incremento = 0;
 
     switch (modo_funcionamiento)
     {
     case MODO_I_CTE:
-        _ref = _ref / 10;
+        // _ref = _ref / 10;
 
         if (_ref > Icc * 1.01)
         {
@@ -145,9 +147,9 @@ void corrige_PWM(float _ref)
         duty_cycle = 230;
     }
 
-    if (duty_cycle < 25)
+    if (duty_cycle < 5)
     {
-        duty_cycle = 25;
+        duty_cycle = 5;
     }
 
     fija_Angulo(duty_cycle);

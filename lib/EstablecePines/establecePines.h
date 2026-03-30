@@ -20,14 +20,14 @@
 #define DISP_INT 8 
 
 // uart2 (RS485 - Tibbo - GPRS))
-#define TX_UART2 13
-#define RX_UART2 12
+#define TX_UART2 18
+#define RX_UART2 17
 
 // RS485 R/W
 #define RS485_RW 11
 
 // PWM
-#define PWM_pin18 18
+#define PWM_pin21 21
 
 // SPI
 #define SPICLOCK 35 // Clock
@@ -36,7 +36,7 @@
 #define SELPIN 38   // Selección Pin
 
 // Habilitación de la salida
-#define ENABLE_1 46
+#define ENABLE_1 39
 
 #define LED_DEBUG2 40 // Led debug 2
 #define LED_DEBUG1 41 // Led debug 1
