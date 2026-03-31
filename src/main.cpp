@@ -209,7 +209,7 @@ void setup()
     ini_UARTs();
 
     // configura i2c
-    Wire.begin(I2C_SDA, I2C_SCL, 1000000);
+    Wire.begin(I2C_SDA, I2C_SCL, 100000);
 
     guardaNVS_Claves();
 
@@ -274,7 +274,7 @@ void loop()
     ctaHoras();
 
     delay(50);
-    if (digitalRead(ENABLE_1))
+    if (digitalRead(!ENABLE_1))
     {
         corrige_PWM(referencia);
     }

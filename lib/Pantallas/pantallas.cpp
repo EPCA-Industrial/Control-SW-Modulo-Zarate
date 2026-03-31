@@ -754,11 +754,11 @@ void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est)
     unsigned long currentMillis = millis();
 
     // Reescribir el display cada 'interval' milisegundos
-    if (currentMillis - millis_ant >= intervalo_refresco)
+/*     if (currentMillis - millis_ant >= intervalo_refresco)
     {
         millis_ant = currentMillis;
         inicializaDisplay();
-    }
+    } */
 
     if (_est == 11)
     {
