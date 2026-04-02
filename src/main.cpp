@@ -160,7 +160,7 @@ void setup()
     xTaskCreatePinnedToCore(
         func_com,         // función de la tarea
         "ctrl_Angulo",    // nombre de la tarea
-        2048,             // tamaño de la pila
+        4096,             // tamaño de la pila
         NULL,             // parámetros de entrada
         0,                // prioridad de la tarea
         &mi_comunicacion, // objeto TaskHandle
