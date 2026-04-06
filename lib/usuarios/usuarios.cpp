@@ -1,12 +1,19 @@
 #include "usuarios.h"
 #include <Arduino.h>
 #include <Preferences.h>
+#include <freertos/semphr.h>
 #include "establecePines.h"
 #include "display16x2.h"
 #include "varFuncionamiento.h"
 #include "varMedicion.h"
 
 Preferences pref;
+static SemaphoreHandle_t nvs_mutex = NULL;
+
+void inicializaNVS_Mutex(void)
+{
+    nvs_mutex = xSemaphoreCreateMutex();
+}
 
 unsigned int claveFabricante = 1111;
 
@@ -60,12 +67,14 @@ void guardaNVS_EstadoER(void)
 {
     if (modo_funcionamiento != MODO_DESPO)
     {
-        pref.begin("estado", false);
-
-        pref.putFloat("ref", referencia);
-        pref.putUInt("modo", modo_funcionamiento);
-
-        pref.end();
+        if (nvs_mutex && xSemaphoreTake(nvs_mutex, pdMS_TO_TICKS(200)) == pdTRUE)
+        {
+            pref.begin("estado", false);
+            pref.putFloat("ref", referencia);
+            pref.putUInt("modo", modo_funcionamiento);
+            pref.end();
+            xSemaphoreGive(nvs_mutex);
+        }
     }
 }
 
@@ -81,12 +90,14 @@ void leeNVS_EstadoER(void)
 
 void guardaNVS_HsFunc(void)
 {
-    pref.begin("horas", false);
-
-    pref.putUInt("hsH", hs_FuncH);
-    pref.putUInt("hsL", hs_FuncL);
-
-    pref.end();
+    if (nvs_mutex && xSemaphoreTake(nvs_mutex, pdMS_TO_TICKS(200)) == pdTRUE)
+    {
+        pref.begin("horas", false);
+        pref.putUInt("hsH", hs_FuncH);
+        pref.putUInt("hsL", hs_FuncL);
+        pref.end();
+        xSemaphoreGive(nvs_mutex);
+    }
 }
 
 void leeNVS_HsFunc(void)

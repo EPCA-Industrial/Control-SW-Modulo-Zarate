@@ -1,6 +1,8 @@
 #ifndef __USUARIOS_H__
 #define __USUARIOS_H__
 
+void inicializaNVS_Mutex(void);
+
 void guardaNVS_Claves(void);
 void leeNVS_claves(void);
 void guardaNVS_Caracteristicas(void);

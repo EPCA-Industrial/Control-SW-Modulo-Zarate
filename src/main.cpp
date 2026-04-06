@@ -211,6 +211,8 @@ void setup()
     // configura i2c
     Wire.begin(I2C_SDA, I2C_SCL, 100000);
 
+    inicializaNVS_Mutex();
+
     guardaNVS_Claves();
 
     // inicia display y carga caracteres especiales

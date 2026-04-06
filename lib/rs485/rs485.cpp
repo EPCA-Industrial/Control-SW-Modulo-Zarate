@@ -200,6 +200,9 @@ void recibeYanalizaValores(void)
             startDetected = true;
             recibiendo = true;
             cantVariablesRecibidas = 0;
+            receivedData = "";
+            endDetected = false;
+            calculatedChecksum = 0;
         }
         else if (byteRecibido == byteFin)
         { // BYTE_FIN '*'
