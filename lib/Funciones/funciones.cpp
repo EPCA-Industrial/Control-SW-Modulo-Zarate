@@ -63,10 +63,28 @@ bool obtenerEstadoBit(uint8_t numero, uint8_t posicion)
     return (numero >> posicion) & 1;
 }
 
+// Cantidad de lecturas LOW consecutivas requeridas para confirmar la sobrecorriente
+// por hardware. El loop principal corre cada ~20-30 ms, por lo que N=3 implica que
+// la señal debe sostenerse al menos ~60-90 ms para disparar. Rechaza glitches de EMI
+// pero sigue actuando rápido ante una sobrecorriente real (que es persistente).
+#define SOBRE_I_DEBOUNCE_N 3
+
 void sobre_I(void)
 {
-    // detecta sobre corriente por hard
-    if (digitalRead(SOBRE_I))
+    static uint8_t consec_low = 0;
+
+    // Debounce por conteo: acumula lecturas LOW consecutivas y descarta si vuelve a HIGH.
+    if (!digitalRead(SOBRE_I))
+    {
+        if (consec_low < 255) consec_low++;
+    }
+    else
+    {
+        consec_low = 0;
+    }
+
+    // detecta sobre corriente por hard (sólo si la señal se sostuvo)
+    if (consec_low >= SOBRE_I_DEBOUNCE_N)
     {
         digitalWrite(DISP_INT, salida_OF);
         digitalWrite(LED_DEBUG1, LOW);

@@ -83,41 +83,97 @@ void fija_Angulo(int _angulo)
     ledcWrite(PWM_CANAL_1, _angulo);
 }
 
-/// @brief Ajusta el ángulo del disparo para tiristores
-/// @param _ref
-/// @return
+// Tope máximo de cambio por iteración (paso adaptativo acotado).
+// Evita saltos bruscos si el error es muy grande y reduce overshoot.
+// Bajado de 10 a 5 para minimizar picos transitorios que puedan activar
+// la protección de sobrecorriente por hardware.
+#define DELTA_MAX 5
+
+// Rango efectivo del duty_cycle (PWM 8 bits = 0..255).
+// Se deja un margen pequeño en los extremos para evitar disparos en el cruce
+// por cero (techo) y duty muy chico que pueda quedar sin disparar (piso).
+// Subido de 230 a 250 para aprovechar más rango y permitir alcanzar la
+// corriente nominal cuando la carga / tensión de red lo exigen.
+#define DUTY_MAX 250
+#define DUTY_MIN 5
+
+// Rampa de arranque suave (soft-start).
+// Durante RAMPA_INICIO_MS desde el primer ajuste — o desde la re-habilitación de la
+// salida tras una pausa larga — el tope efectivo crece linealmente de
+// DELTA_MAX_INICIAL hasta DELTA_MAX, evitando un salto brusco al energizar.
+#define RAMPA_INICIO_MS     2000
+#define DELTA_MAX_INICIAL   1
+// Si el llamador deja de invocar corrige_PWM por más de PAUSA_RESET_MS,
+// se asume que la salida estuvo deshabilitada y se reinicia la rampa.
+#define PAUSA_RESET_MS      500
+
+/// @brief Ajusta el ángulo del disparo para tiristores con control proporcional acotado
+///        más acumulador fraccionario (elimina error de estado estacionario).
+///        El paso es proporcional al error y queda limitado a ±DELTA_MAX por iteración.
+///        Se mantiene la banda muerta (±1% en I/V, ±0.5% en P) para evitar hunting.
+///        Durante los primeros RAMPA_INICIO_MS desde el (re)arranque, el tope del paso
+///        crece linealmente desde DELTA_MAX_INICIAL hasta DELTA_MAX (soft-start).
+///        El acumulador fraccionario `incremento_acum` integra los aportes <1 paso entero
+///        que de otra forma se truncarían a 0, asegurando que el control siga reduciendo
+///        el error hasta entrar en la banda muerta.
+/// @param _ref referencia recibida (en décimas de A o décimas de V según modo)
 void corrige_PWM(float _ref)
 {
-    //int incremento = 0;
+    static int32_t tiempo_inicio_rampa = -1;
+    static uint32_t ultima_llamada_ms  = 0;
+    static float   incremento_acum    = 0.0f;
+    static uint8_t ultimo_modo        = 0;
+    uint32_t ahora_ms = millis();
+
+    // (Re)inicio: firmware fresco, pausa larga (re-habilitación tras protección) o cambio de modo.
+    bool reinicio = false;
+    if (tiempo_inicio_rampa < 0 || (ahora_ms - ultima_llamada_ms) > PAUSA_RESET_MS)
+    {
+        tiempo_inicio_rampa = (int32_t)ahora_ms;
+        reinicio = true;
+    }
+    ultima_llamada_ms = ahora_ms;
+
+    if (reinicio || modo_funcionamiento != ultimo_modo)
+    {
+        incremento_acum = 0.0f;
+    }
+    ultimo_modo = modo_funcionamiento;
+
+    // Cálculo del aporte de esta iteración en float (sin truncar todavía).
+    float incremento_f = 0.0f;
+    bool en_banda = true;
 
     switch (modo_funcionamiento)
     {
     case MODO_I_CTE:
-        // _ref = _ref / 10;
+        _ref = _ref / 10;
 
         if (_ref > Icc * 1.01)
         {
-            duty_cycle = duty_cycle + 1;
+            incremento_f = 255.0f * (_ref - Icc) / (float)ER_Icc;
+            en_banda = false;
         }
         else if (_ref < Icc * 0.99)
         {
-            duty_cycle = duty_cycle - 1;
+            incremento_f = 255.0f * (_ref - Icc) / (float)ER_Icc;
+            en_banda = false;
         }
-
-        //incremento = (int)(255 * (_ref - Icc) / ER_Icc);
 
         break;
     case MODO_P_CTE:
-
-        //incremento = (int)(255 * (_ref + Pot) / 6000);
-
+        // Pot y _ref son magnitudes positivas que representan potencial negativo,
+        // por eso se compara contra -_ref. El signo del incremento se fuerza
+        // para respetar la dirección del control que ya tenía el código original.
         if (-_ref > Pot * 1.005)
         {
-            duty_cycle = duty_cycle - 1;
+            incremento_f = -255.0f * fabs(-_ref - Pot) / 6000.0f;
+            en_banda = false;
         }
         else if (-_ref < Pot * 0.995)
         {
-            duty_cycle = duty_cycle + 1;
+            incremento_f = 255.0f * fabs(-_ref - Pot) / 6000.0f;
+            en_banda = false;
         }
 
         break;
@@ -126,30 +182,76 @@ void corrige_PWM(float _ref)
 
         if (_ref > Vcc * 1.01)
         {
-            duty_cycle = duty_cycle + 1;
+            incremento_f = 255.0f * (_ref - Vcc) / (float)ER_Vcc;
+            en_banda = false;
         }
         else if (_ref < Vcc * 0.99)
         {
-            duty_cycle = duty_cycle - 1;
+            incremento_f = 255.0f * (_ref - Vcc) / (float)ER_Vcc;
+            en_banda = false;
         }
-
-        //incremento = (int)(255 * (_ref - Vcc) / ER_Vcc);
 
         break;
     default:
         break;
     }
 
-    //duty_cycle = duty_cycle + incremento;
-
-    if (duty_cycle > 230)
+    // Acumulador fraccionario: si el error es chico el aporte puede ser <1, se va
+    // sumando para no perderse al truncar a int. Dentro de la banda muerta se reinicia
+    // para evitar arrastres residuales que puedan llevar al control al otro lado.
+    if (en_banda)
     {
-        duty_cycle = 230;
+        incremento_acum = 0.0f;
+    }
+    else
+    {
+        incremento_acum += incremento_f;
+        // Anti-windup: el acumulador no puede crecer más allá de DELTA_MAX.
+        if (incremento_acum >  (float)DELTA_MAX) incremento_acum =  (float)DELTA_MAX;
+        else if (incremento_acum < -(float)DELTA_MAX) incremento_acum = -(float)DELTA_MAX;
     }
 
-    if (duty_cycle < 5)
+    // Parte entera del acumulador = paso a aplicar; la fracción queda para la próxima.
+    int incremento = (int)incremento_acum;
+    incremento_acum -= (float)incremento;
+
+    // Soft-start: durante los primeros RAMPA_INICIO_MS el tope efectivo crece
+    // linealmente desde DELTA_MAX_INICIAL hasta DELTA_MAX.
+    int32_t transcurrido_ms = (int32_t)ahora_ms - tiempo_inicio_rampa;
+    int delta_max_efectivo;
+    if (transcurrido_ms < RAMPA_INICIO_MS)
     {
-        duty_cycle = 5;
+        delta_max_efectivo = DELTA_MAX_INICIAL +
+            ((DELTA_MAX - DELTA_MAX_INICIAL) * transcurrido_ms) / RAMPA_INICIO_MS;
+    }
+    else
+    {
+        delta_max_efectivo = DELTA_MAX;
+    }
+
+    // Acota el paso final; lo no aplicado por la rampa se devuelve al acumulador
+    // para no perder corrección efectiva.
+    if (incremento > delta_max_efectivo)
+    {
+        incremento_acum += (float)(incremento - delta_max_efectivo);
+        incremento = delta_max_efectivo;
+    }
+    else if (incremento < -delta_max_efectivo)
+    {
+        incremento_acum += (float)(incremento + delta_max_efectivo);
+        incremento = -delta_max_efectivo;
+    }
+
+    duty_cycle = duty_cycle + incremento;
+
+    if (duty_cycle > DUTY_MAX)
+    {
+        duty_cycle = DUTY_MAX;
+    }
+
+    if (duty_cycle < DUTY_MIN)
+    {
+        duty_cycle = DUTY_MIN;
     }
 
     fija_Angulo(duty_cycle);

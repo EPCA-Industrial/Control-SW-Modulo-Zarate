@@ -20,14 +20,14 @@
 #define DISP_INT 8 
 
 // uart2 (RS485 - Tibbo - GPRS))
-#define TX_UART2 18
-#define RX_UART2 17
+#define TX_UART2 13
+#define RX_UART2 12
 
 // RS485 R/W
 #define RS485_RW 11
 
 // PWM
-#define PWM_pin21 21
+#define PWM_pin21 18
 
 // SPI
 #define SPICLOCK 35 // Clock

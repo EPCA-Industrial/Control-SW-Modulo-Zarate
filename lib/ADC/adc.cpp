@@ -66,37 +66,26 @@ float mide(int _canal, int _veces)
 
 void midePotencial(void)
 {
-    uint32_t millisAnt;
-    float auxPot = Pot;
+    float auxPot;
 
-    millisAnt = millis();
     digitalWrite(LED_DEBUG2, HIGH);
-    //  mide canal 3 y promedia n veces
+    //  mide canal 3 y promedia n veces (425 muestras ~ 10ms para filtrar 50Hz)
     auxPot = mide(3, 425);
     digitalWrite(LED_DEBUG2, LOW);
 
-    // guarda 'Pot' sólo si tardó 10mSeg midiendo.
-    if (millis() == millisAnt + 10)
-    {
-        Pot = (2048 - auxPot) * 2;
-    }
+    Pot = (2048 - auxPot) * 2;
 }
 void mideTodo(void)
 {
-    // digitalWrite(LED_DEBUG2, HIGH);
-    //   mide canal 1 y promedia n veces
-    Vcc = mide(1, 435) * 0.0125;
-    // digitalWrite(LED_DEBUG2, LOW);
+    // Vcc: divisor 0.022, VREF=4.096V -> 1/(0.022*999.76) ~= 0.04546 V/cuenta
+    Vcc = mide(1, 435) * 0.04546;
 
-    // digitalWrite(LED_DEBUG2, HIGH);
-    //  mide canal 2 y promedia n veces
-    //Icc = mide(2, 435) * 0.2841; //! para modulo 1A
+    // Icc: shunt 50A/50mV * IC(50) / 2 * 1.8 = 0.045 V/A, VREF=4.096V -> 1/(0.045*999.76) ~= 0.02223 A/cuenta
+    //Icc = mide(2, 435) * 0.2841;  //! para modulo 1A
     //Icc = mide(2, 435) * 0.02841; //! para modulo 100mA
-    Icc = mide(2, 435) * 0.0028; //! para shunt 10A
+    //Icc = mide(2, 435) * 0.0028;  //! para shunt 10A
     //Icc = mide(2, 435) * 0.00568; //! para shunt 20A
-
-    Icc = Icc * 1000; //! para convertir a mA
-    // digitalWrite(LED_DEBUG2, LOW);
+    Icc = mide(2, 435) * 0.02223;   //! para shunt 50A/50mV + IC x50 + /2 + x1.8 (Icc en A)
 
     midePotencial();
 

@@ -143,10 +143,10 @@ uint16_t check_Sum(void)
 
 void armaCadenaValores(void)
 {
-    chkSum = num_modulo + modo_funcionamiento + (int)(Vcc * 10) + (int)(Icc) + (int)Pot + (int)Temp1 + (int)referencia + hs_FuncH + hs_FuncL + despol_Tiempo + despol_Potencial;
+    chkSum = num_modulo + modo_funcionamiento + (int)(Vcc * 10) + (int)(Icc * 10) + (int)Pot + (int)Temp1 + (int)referencia + hs_FuncH + hs_FuncL + despol_Tiempo + despol_Potencial;
 
     // Crear una cadena con los valores separados por comas
-    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial, chkSum);
+    sprintf(cadena_a_enviar, "$%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i*\n", num_modulo, modo_funcionamiento, (int)(Vcc * 10), (int)(Icc * 10), (int)Pot, (int)Temp1, (int)referencia, hs_FuncH, hs_FuncL, despol_Tiempo, despol_Potencial, chkSum);
 
     // Enviar la cadena por Serial1 (o cualquier UART configurada)
     Serial.print("Enviando: ");

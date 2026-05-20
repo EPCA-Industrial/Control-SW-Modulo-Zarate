@@ -88,7 +88,7 @@ static void func_com(void *pvParameters)
                         switch (modo_funcionamiento)
                         {
                         case 1:
-                            if (regs_entrantes[4] <= ER_Icc)
+                            if (regs_entrantes[4] <= ER_Icc * 10)
                             {
                                 referencia = regs_entrantes[4];
                             }
@@ -275,8 +275,9 @@ void loop()
     sobre_I();
     ctaHoras();
 
-    delay(50);
-    if (digitalRead(!ENABLE_1))
+    delay(10);
+    // Sólo corrige el ángulo si la salida está habilitada (ENABLE_1 es activo en bajo).
+    if (digitalRead(ENABLE_1) == LOW)
     {
         corrige_PWM(referencia);
     }

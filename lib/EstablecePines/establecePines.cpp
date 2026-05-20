@@ -36,7 +36,7 @@ void configuraPines(void)
     pinMode(RS485_RW, OUTPUT);
 
     // Sobre corriente por hard
-    pinMode(SOBRE_I, INPUT_PULLDOWN);
+    pinMode(SOBRE_I, INPUT_PULLUP);
 
     // desactiva el dispositivo SPI para empezar
     digitalWrite(SELPIN, HIGH);
