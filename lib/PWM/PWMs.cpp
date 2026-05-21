@@ -98,14 +98,12 @@ void fija_Angulo(int _angulo)
 #define DUTY_MIN 5
 
 // Rampa de arranque suave (soft-start).
-// Durante RAMPA_INICIO_MS desde el primer ajuste — o desde la re-habilitación de la
-// salida tras una pausa larga — el tope efectivo crece linealmente de
-// DELTA_MAX_INICIAL hasta DELTA_MAX, evitando un salto brusco al energizar.
+// Sólo se aplica en el PRIMER arranque del firmware (power-on / reset del MCU).
+// Una desactivación intermedia por DISP_INT NO reinicia la rampa: el lazo
+// retoma el control con el último duty_cycle y acumulador, lo que permite
+// usar DISP_INT como sincronismo para ensayos ON-OFF sin perder el estado.
 #define RAMPA_INICIO_MS     2000
 #define DELTA_MAX_INICIAL   1
-// Si el llamador deja de invocar corrige_PWM por más de PAUSA_RESET_MS,
-// se asume que la salida estuvo deshabilitada y se reinicia la rampa.
-#define PAUSA_RESET_MS      500
 
 /// @brief Ajusta el ángulo del disparo para tiristores con control proporcional acotado
 ///        más acumulador fraccionario (elimina error de estado estacionario).
@@ -120,20 +118,21 @@ void fija_Angulo(int _angulo)
 void corrige_PWM(float _ref)
 {
     static int32_t tiempo_inicio_rampa = -1;
-    static uint32_t ultima_llamada_ms  = 0;
     static float   incremento_acum    = 0.0f;
     static uint8_t ultimo_modo        = 0;
     uint32_t ahora_ms = millis();
 
-    // (Re)inicio: firmware fresco, pausa larga (re-habilitación tras protección) o cambio de modo.
+    // Reinicio sólo en el primer arranque del firmware. Las pausas intermedias
+    // (por ejemplo DISP_INT en LOW para un ensayo ON-OFF) NO reinician la rampa
+    // ni descartan el acumulador: el lazo retoma el control con el mismo estado.
     bool reinicio = false;
-    if (tiempo_inicio_rampa < 0 || (ahora_ms - ultima_llamada_ms) > PAUSA_RESET_MS)
+    if (tiempo_inicio_rampa < 0)
     {
         tiempo_inicio_rampa = (int32_t)ahora_ms;
         reinicio = true;
     }
-    ultima_llamada_ms = ahora_ms;
 
+    // El cambio de modo sí descarta el acumulador (cambia la magnitud controlada).
     if (reinicio || modo_funcionamiento != ultimo_modo)
     {
         incremento_acum = 0.0f;

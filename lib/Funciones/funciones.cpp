@@ -137,6 +137,55 @@ void sobre_I(void)
     }
 }
 
+// ------------------------------------------------------------
+// Protección térmica con LM35 (canal 5 del MCP3208)
+// ------------------------------------------------------------
+
+static bool corte_termico = false;
+
+bool corteTermicoActivo(void)
+{
+    return corte_termico;
+}
+
+/// @brief Aplica derateo de la referencia en función de la temperatura del módulo.
+///        - Sin acción si Temp1 <= TEMP_INICIO_DERATEO.
+///        - Derateo lineal entre TEMP_INICIO_DERATEO y TEMP_FIN_DERATEO.
+///        - Corte total (devuelve 0) si Temp1 > TEMP_CRITICA, con histéresis
+///          de reenganche cuando Temp1 < TEMP_REENGANCHE.
+/// @param ref referencia configurada por el operador (no se modifica)
+/// @return referencia efectiva a pasar al control PWM
+float aplicaDerateoTemp(float ref)
+{
+    // Corte crítico con histéresis: una vez que entra, sólo sale cuando enfría.
+    if (corte_termico)
+    {
+        if (Temp1 < TEMP_REENGANCHE)
+        {
+            corte_termico = false;
+        }
+        else
+        {
+            return 0.0f;
+        }
+    }
+    else if (Temp1 > TEMP_CRITICA)
+    {
+        corte_termico = true;
+        return 0.0f;
+    }
+
+    // Por debajo del umbral de derateo, pasa la referencia tal cual.
+    if (Temp1 <= TEMP_INICIO_DERATEO) return ref;
+
+    // Derateo lineal: factor 1.0 en TEMP_INICIO_DERATEO -> 0.0 en TEMP_FIN_DERATEO.
+    float factor = (TEMP_FIN_DERATEO - Temp1) /
+                   (TEMP_FIN_DERATEO - TEMP_INICIO_DERATEO);
+    if (factor < 0.0f) factor = 0.0f;
+    if (factor > 1.0f) factor = 1.0f;
+    return ref * factor;
+}
+
 void ensayoDespolarizacion(uint8_t _ToP)
 {
     char auxtxt[16];

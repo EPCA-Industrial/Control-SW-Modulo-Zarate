@@ -759,9 +759,28 @@ void muestraMedicion(uint8_t _coRef, uint8_t _fiRef, uint8_t _est)
     //    lcd_print_Posicion(0, 1, "        ");
     muestraFloat("V: ", Vcc, 4, 1, 0, 0);
     muestraFloat("I: ", Icc, 4, 1, 8, 0);
-    // borra atrás del potencial
-    lcd_print_Posicion(9, 2, "       ");
     muestraFloat("P: ", Pot, 5, 0, 0, 1);
+    // Temperatura LM35 en la segunda fila: "T: 36" pegado a la etiqueta.
+    // Se limpia primero el rango cols 9-14 por si quedaron residuos del formato anterior.
+    // Convenciones (¡cuidado!):
+    //   - muestraFloat()           usa fila/col 0-indexed.
+    //   - lcd_print_Posicion()     usa fila/col 1-indexed (hace setCursor(c-1, f-1)).
+    // Para que el indicador térmico vaya a col 15 (última col del LCD) sin pisar
+    // el último dígito de T, hay que pasarle (16, 2) a lcd_print_Posicion.
+    lcd_print_Posicion(10, 2, "      ");
+    muestraFloat("T:", Temp1, 3, 0, 9, 1);
+    if (corteTermicoActivo())
+    {
+        lcd_print_Posicion(16, 2, "X");
+    }
+    else if (Temp1 > TEMP_INICIO_DERATEO)
+    {
+        lcd_print_Posicion(16, 2, "!");
+    }
+    else
+    {
+        lcd_print_Posicion(16, 2, " ");
+    }
 
     sprintf(bufferTxt, "Hs: %li", (unsigned long)hs_FuncH * 32767 + (unsigned long)hs_FuncL);
     // lcd_print_Posicion(1, 1, "                ");

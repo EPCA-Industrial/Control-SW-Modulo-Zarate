@@ -89,9 +89,34 @@ void mideTodo(void)
 
     midePotencial();
 
-    // mide canal 6 y promedia n veces
-    Temp1 = (mide(6, 10) - 500) / 10;
-    // digitalWrite(LED_DEBUG2, LOW);
+    // LM35 conectado al pin 6 del MCP3208 (canal CH5 del datasheet).
+    // La función mide() usa el número de pin físico (1-base), por eso se pasa 6.
+    // LM35: 10 mV/°C; VREF=4.096V -> 1 mV/cuenta -> 0.1 °C/cuenta.
+    //
+    // Filtrado en dos etapas para una lectura visualmente estable y para evitar
+    // que el derateo térmico oscile en el borde de los umbrales (70/85/90 °C):
+    //   1) Promedio de 50 muestras dentro de mide() -> reduce ruido base.
+    //   2) EMA (exponential moving average) con alpha = 0.10  ->  pondera 10%
+    //      la lectura nueva y 90% el histórico. Constante de tiempo ~10 lecturas,
+    //      suficiente para una variable térmica.
+    {
+        static float temp_filtrada = 0.0f;
+        static bool  temp_init     = false;
+
+        float temp_raw = mide(6, 50) * 0.1f;
+
+        if (!temp_init)
+        {
+            temp_filtrada = temp_raw;
+            temp_init     = true;
+        }
+        else
+        {
+            temp_filtrada = 0.1f * temp_raw + 0.9f * temp_filtrada;
+        }
+
+        Temp1 = temp_filtrada;
+    }
 }
 
 void analizaAlarmas(void)

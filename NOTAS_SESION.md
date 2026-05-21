@@ -494,31 +494,33 @@ delta_max_efectivo
        0      2000
 ```
 
-Detección de "arranque" autocontenida — no requiere modificar `main.cpp`:
+Detección de "arranque" autocontenida — no requiere modificar `main.cpp`.
+**Importante**: la rampa sólo se aplica en el primer arranque del firmware
+(power-on / reset del MCU). Las pausas intermedias provocadas por
+`DISP_INT = LOW` NO la reinician, para permitir ensayos ON-OFF sincronizados
+sin perder el estado del lazo (ver §7.7).
 
 ```
 static int32_t tiempo_inicio_rampa = -1;
-static uint32_t ultima_llamada_ms  = 0;
 
-if (tiempo_inicio_rampa < 0 ||
-    (ahora_ms - ultima_llamada_ms) > PAUSA_RESET_MS)   // 500 ms
+if (tiempo_inicio_rampa < 0)
 {
-    tiempo_inicio_rampa = ahora_ms;   // (re)inicia la rampa
+    tiempo_inicio_rampa = ahora_ms;   // sólo en el primer arranque
 }
 ```
 
 - **Firmware recién booteado**: `tiempo_inicio_rampa = -1` → la primera llamada inicia la rampa.
-- **Re-habilitación tras `sobre_I` o cambio de `DISP_INT`**: como `corrige_PWM()` no se llama mientras `ENABLE_1` está en `HIGH`, al volver a habilitarse la pausa supera los 500 ms y la rampa reinicia.
-- **Parpadeos breves (< 500 ms)**: no resetean la rampa, evitando que la salida se "lance" en cada glitch.
+- **Re-habilitación intermedia por `DISP_INT`**: el lazo retoma el control con el
+  mismo `duty_cycle` y acumulador, sin pasar por soft-start. Comportamiento clave
+  para ensayos ON-OFF.
 
-Constantes ajustables en `lib/PWM/PWMs.cpp` (líneas 88–98):
+Constantes ajustables en `lib/PWM/PWMs.cpp`:
 
 | Constante | Valor por defecto | Rol |
 |---|---|---|
-| `DELTA_MAX` | 10 | Paso máximo por iteración en régimen |
+| `DELTA_MAX` | 5 | Paso máximo por iteración en régimen |
 | `DELTA_MAX_INICIAL` | 1 | Paso máximo permitido al instante 0 de la rampa |
 | `RAMPA_INICIO_MS` | 2000 | Duración total de la rampa de arranque suave |
-| `PAUSA_RESET_MS` | 500 | Pausa mínima sin llamadas que reinicia la rampa |
 
 #### Resultado esperado
 
@@ -530,7 +532,7 @@ Constantes ajustables en `lib/PWM/PWMs.cpp` (líneas 88–98):
 | Escalón 50% en régimen | ~12 iteraciones × 25 ms ≈ **300 ms** |
 | Escalón 10–15% en régimen | ~5–10 × 25 ms ≈ **150 ms** |
 | Cerca del setpoint | Paso cae a 1 y luego banda muerta corta el bucle (sin hunting) |
-| Re-habilitación tras protección | La rampa reinicia: arranque suave nuevamente |
+| Re-habilitación intermedia por `DISP_INT` | Retoma con el mismo `duty_cycle`, sin rampa (sincronismo ON-OFF) |
 
 Si en banco se observa overshoot, se puede bajar `DELTA_MAX` (p. ej. a `5`) o extender `RAMPA_INICIO_MS`. Si la respuesta sigue siendo lenta para correcciones medianas, conviene mover `corrige_PWM` a una tarea FreeRTOS con `vTaskDelay(20 ms)` en otro core (cambio mayor, no aplicado en esta iteración).
 
@@ -666,6 +668,252 @@ Subido de **230 → 250**. Sigue dejando un margen de 5 unidades (~2%) para evit
 - Si el hardware (tiristores / transformador / carga) directamente no puede entregar más corriente, subir el techo no aporta.
 
 Si tras este cambio la corriente sigue tope en ~10.4 A, el límite es físico y conviene revisar el hardware antes de tocar más software.
+
+### 7.6. Protección térmica con LM35 (sensor en canal 5 del MCP3208)
+
+Se agrega medición y protección por temperatura del módulo usando un sensor **LM35** conectado al canal 5 del MCP3208. La estrategia es **derateo lineal** de la referencia entre dos umbrales y **corte total con autorecuperación** cuando se supera un umbral crítico. La temperatura se exhibe permanentemente en el display y se transmite al rack (la trama RS485 ya incluye `Temp1`).
+
+#### Hardware
+
+- LM35 alimentado entre +5 V y GND, salida al **pin 6** del MCP3208 (que corresponde a **CH5** según el datasheet).
+- LM35: **10 mV/°C**, salida lineal 0–1 V para 0–100 °C.
+- Con VREF = 4.096 V y 12 bits, **1 cuenta = 1 mV** → 1 °C = 10 cuentas.
+- Recomendación: capacitor 100 nF entre la salida del LM35 y GND, cerca del sensor.
+
+> **Importante sobre la API local**: la función `mide(channel, ...)` en este proyecto recibe el **número de pin físico del integrado (1-base)**, NO el número de canal CHx del datasheet. Adentro hace `(channel - 1) << 3` para construir el byte de selección. Por eso para leer el pin 6 (CH5 del datasheet) hay que pasar `channel = 6`. Mantener la convención existente del proyecto evita romper el resto de las llamadas.
+
+#### a) Medición (`lib/ADC/adc.cpp` `mideTodo()`)
+
+Filtrado en **dos etapas** para una lectura estable y para evitar que el derateo
+oscile en el borde de los umbrales (70 / 85 / 90 °C):
+
+1. Promedio de **50 muestras** dentro de `mide()` (reduce ruido base).
+2. **EMA** (exponential moving average) con `α = 0.10` → pondera 10 % la lectura
+   nueva y 90 % el histórico. Constante de tiempo ≈ 10 lecturas; suficiente
+   para una variable térmica.
+
+```
+static float temp_filtrada = 0.0f;
+static bool  temp_init     = false;
+
+float temp_raw = mide(6, 50) * 0.1f;
+
+if (!temp_init) { temp_filtrada = temp_raw; temp_init = true; }
+else            { temp_filtrada = 0.1f * temp_raw + 0.9f * temp_filtrada; }
+
+Temp1 = temp_filtrada;
+```
+
+> Si en una versión futura se decide que la respuesta es demasiado lenta, basta
+> con subir `α` (p. ej. 0.2 o 0.3) sin tocar el resto de la lógica.
+
+Tabla rápida de correspondencias (para futura referencia):
+
+| `mide(channel, …)` | Bits seleccionados | Canal CHx (datasheet) | Pin físico | Etiqueta del esquema |
+|:---:|:---:|:---:|:---:|---|
+| 1 | 000 | CH0 | 1 | MEDICION_V (Vcc) |
+| 2 | 001 | CH1 | 2 | MEDICION_I (Icc) |
+| 3 | 010 | CH2 | 3 | MEDICION_P (Pot) |
+| 6 | 101 | CH5 | 6 | TEMP (LM35) |
+
+La variable `Temp1` ya existía y se transmite al rack en la trama RS485 (`armaCadenaValores()`), por lo que **el rack ve la temperatura sin cambios adicionales** en su firmware (sólo hay que reinterpretar el campo correspondiente como °C).
+
+#### b) Umbrales (`lib/Funciones/funciones.h`)
+
+```
+#define TEMP_INICIO_DERATEO 70.0f   // °C: inicia derateo lineal
+#define TEMP_FIN_DERATEO    85.0f   // °C: derateo completo (factor = 0)
+#define TEMP_CRITICA        90.0f   // °C: corta salida totalmente
+#define TEMP_REENGANCHE     75.0f   // °C: histéresis para volver del corte
+```
+
+Curva del factor de derateo aplicado a la referencia:
+
+```
+factor
+  1.0 |─────────.
+      |          \
+      |           \
+      |            \
+  0.0 |─────────────●─────────────●─────────
+       70°C        85°C          90°C
+       (inicio)   (fin lineal)   (corte total)
+```
+
+#### c) Lógica (`lib/Funciones/funciones.cpp` — `aplicaDerateoTemp()`)
+
+Estado interno mínimo: una sola variable estática `corte_termico`. Histéresis para evitar parpadeo entre operación y corte.
+
+```
+float aplicaDerateoTemp(float ref)
+{
+    if (corte_termico) {
+        if (Temp1 < TEMP_REENGANCHE) corte_termico = false;
+        else return 0.0f;
+    } else if (Temp1 > TEMP_CRITICA) {
+        corte_termico = true;
+        return 0.0f;
+    }
+
+    if (Temp1 <= TEMP_INICIO_DERATEO) return ref;
+
+    float factor = (TEMP_FIN_DERATEO - Temp1) /
+                   (TEMP_FIN_DERATEO - TEMP_INICIO_DERATEO);
+    if (factor < 0.0f) factor = 0.0f;
+    if (factor > 1.0f) factor = 1.0f;
+    return ref * factor;
+}
+```
+
+La función `corteTermicoActivo()` expone el estado de corte para que el display lo visualice.
+
+#### d) Aplicación al control (`src/main.cpp` `loop()`)
+
+Un solo cambio quirúrgico — la referencia que el operador configura (`referencia`) no se toca, sólo se procesa antes de pasarla al PWM:
+
+```
+if (digitalRead(ENABLE_1) == LOW)
+{
+    corrige_PWM(aplicaDerateoTemp(referencia));
+}
+```
+
+Cuando la temperatura baja, el derateo desaparece automáticamente y el control vuelve a operar contra la referencia completa, sin intervención del operador.
+
+#### e) Display (`lib/Pantallas/pantallas.cpp` `muestraMedicion()`)
+
+Se ocupó el espacio que antes se borraba con `lcd_print_Posicion(9, 2, "       ")` (columnas 9–15 de la fila 2). Layout resultante 16×4:
+
+```
+Pos:    0123456789012345
+Fila 1: V:XX.X  I:XX.X
+Fila 2: P:XXXXX T: XX !
+Fila 3: Hs:XXXXX
+Fila 4: R:XXX.X A
+```
+
+`muestraFloat("T:", Temp1, 3, 0, 9, 1)` → etiqueta (cols 9–10) + 3 chars
+(`" 36"`, cols 11–13). Col 14 limpia. Col 15 indicador `!`/`X`/`' '`.
+
+> **⚠ Convenciones del display (¡leer antes de tocar!)**: las funciones
+> `muestraFloat()` y `lcd_print_Posicion()` **no usan el mismo origen**:
+> - `muestraFloat(_c, _f)` es 0-indexed → llama `setCursor(_c, _f)` directo.
+> - `lcd_print_Posicion(c, f)` es 1-indexed → llama `setCursor(c-1, f-1)`.
+>
+> Para alinear el indicador térmico a la última columna del LCD (col 15
+> 0-indexed) hay que pasar `lcd_print_Posicion(16, 2, ...)`. En la primera
+> versión usé `lcd_print_Posicion(15, 2, ...)`, lo que hacía que el
+> indicador cayera en **col 14** pisando el último dígito de la
+> temperatura: con `Temp1 = 36` se veía "T:  3" porque el "6" era
+> sobrescrito por el indicador (un espacio mientras T < 70 °C). **Corregido**.
+
+Indicador en col 15 fila 2:
+
+| Símbolo | Significado |
+|:---:|---|
+| (espacio) | Operación normal, T < 70 °C |
+| `!` | En zona de derateo (70 °C ≤ T ≤ 85 °C) — el operador ve que el sistema está bajando corriente |
+| `X` | Corte térmico activo (T > 90 °C) — salida en cero hasta que enfríe a < 75 °C |
+
+#### Lo que NO se modificó (decisión "quirúrgica")
+
+- **Menú fabricante**: los umbrales quedan como `#define`. Si en el futuro se desea configurables vía encoder, se agrega una entrada al menú `Pant_Fabricante` y se guardan en NVS.
+- **`sobre_I()`**: queda intacta. La protección térmica es ortogonal y vive en una función nueva.
+- **Trama RS485**: `Temp1` ya se transmite, el rack la lee sin cambios.
+
+#### Calibración fina
+
+La fórmula `mide(6, 50) * 0.1f` es **teórica** (LM35 ideal + VREF exacta). Si en banco se observa un offset constante respecto a un termómetro patrón (típicamente < 2 °C), conviene ajustar la lectura cruda antes de pasarla al EMA:
+
+```
+float temp_raw = mide(6, 50) * 0.1f - OFFSET_CAL;   // si lee de más
+float temp_raw = mide(6, 50) * 0.1f + OFFSET_CAL;   // si lee de menos
+```
+
+Documentar el offset aplicado en este archivo si se utiliza.
+
+#### Verificaciones tras flashear
+
+1. Confirmar que el display muestra `T:XX.X` con un valor coherente con la temperatura ambiente (típicamente 20–30 °C en banco).
+2. Calentar el sensor controladamente y verificar:
+   - Al pasar 70 °C aparece `!` y la corriente empieza a bajar proporcionalmente.
+   - Al pasar 90 °C cambia a `X` y la salida se va a cero.
+   - Al bajar por debajo de 75 °C, el `X` desaparece y la salida vuelve a operar.
+3. Verificar que la `referencia` que muestra el menú no cambió — sólo se está modulando la corriente real.
+
+---
+
+### 7.7. `DISP_INT` como sincronismo para ensayos ON-OFF
+
+#### Problema
+
+Para ensayos ON-OFF se quiere usar el interruptor físico conectado a `DISP_INT`
+(GPIO 8) como sincronismo: al cerrarlo el módulo apaga la salida y al abrirlo
+debe **volver al mismo `duty_cycle`** sin pasar por la rampa de soft-start.
+
+La lógica original de `corrige_PWM()` interpretaba cualquier pausa mayor a
+`PAUSA_RESET_MS = 500 ms` como un re-arranque y reiniciaba la rampa
+(2 segundos hasta paso completo) y el acumulador fraccionario. Eso era
+deseable tras el power-on pero indeseable en cada toggle de DISP_INT.
+
+#### Solución
+
+En `lib/PWM/PWMs.cpp` se eliminó la condición de reinicio por pausa larga.
+La rampa de soft-start ahora se aplica **sólo en el primer arranque del
+firmware** (`tiempo_inicio_rampa < 0`):
+
+```
+static int32_t tiempo_inicio_rampa = -1;
+
+bool reinicio = false;
+if (tiempo_inicio_rampa < 0)            // sólo en el power-on / reset del MCU
+{
+    tiempo_inicio_rampa = (int32_t)ahora_ms;
+    reinicio = true;
+}
+```
+
+Se eliminaron `ultima_llamada_ms` y `PAUSA_RESET_MS`. El reinicio del
+acumulador por cambio de modo se conserva (`reinicio || modo != ultimo_modo`).
+
+#### Comportamiento resultante (gating por SW en GPIO 18)
+
+Como `ENABLE_1` aún no está cableado en el hardware, el corte/encendido del
+PWM se hace por software directamente sobre el LEDC (GPIO 18). El `loop()`
+en `src/main.cpp` aplica:
+
+```
+static bool salida_estaba_off = false;
+if (digitalRead(ENABLE_1) == LOW)
+{
+    if (salida_estaba_off) { fija_Angulo(duty_cycle); salida_estaba_off = false; }
+    corrige_PWM(aplicaDerateoTemp(referencia));
+}
+else
+{
+    fija_Angulo(0);
+    salida_estaba_off = true;
+}
+```
+
+| Evento | Acción |
+|---|---|
+| `DISP_INT = LOW` (corte) | ISR pone `ENABLE_1 = HIGH`. La próxima iteración del `loop()` ejecuta `fija_Angulo(0)` → LEDC mantiene GPIO 18 en LOW, el SCR no se dispara. `duty_cycle` queda **intacto** en RAM. |
+| `DISP_INT = HIGH` (vuelve) | ISR pone `ENABLE_1 = LOW`. La próxima iteración detecta el flanco (`salida_estaba_off == true`) y ejecuta `fija_Angulo(duty_cycle)` **antes** del `corrige_PWM()` → la salida vuelve al ángulo previo de inmediato, sin rampa. |
+| Latencia de re-conexión | ≈ 10–30 ms (período del `loop()`). Para sincronismo a 50 Hz convendría llamar `ledcWrite` desde la ISR (no implementado todavía). |
+
+Si en el futuro se cablea `ENABLE_1` por hardware, ambos mecanismos conviven
+sin problema: el HW actúa como capa de seguridad redundante.
+
+#### Consideraciones
+
+- Si entre dos ciclos ON-OFF se modifica la `referencia`, el lazo arranca con
+  el `duty_cycle` viejo apuntando al setpoint nuevo. La corrección ocurre
+  paso a paso acotada por `DELTA_MAX = 5`, no instantánea.
+- En cargas inductivas (transformador, motor), el escalón al volver al
+  `duty_cycle` previo puede generar di/dt importantes. Verificar en banco
+  que el hardware tolera el escalón antes de usar este modo con cargas
+  reactivas.
 
 ---
 

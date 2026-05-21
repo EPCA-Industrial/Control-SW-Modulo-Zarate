@@ -276,10 +276,30 @@ void loop()
     ctaHoras();
 
     delay(10);
-    // Sólo corrige el ángulo si la salida está habilitada (ENABLE_1 es activo en bajo).
-    if (digitalRead(ENABLE_1) == LOW)
+    // Gating del PWM por software (no se usa ENABLE_1 a nivel hardware todavía).
+    // - ENABLE_1 == LOW : salida habilitada -> aplica duty_cycle previo si veníamos
+    //                     de un OFF (restauración instantánea) y luego corrige_PWM.
+    // - ENABLE_1 == HIGH: salida deshabilitada -> fija_Angulo(0) deja el GPIO del
+    //                     PWM en LOW, sin disparar el SCR. duty_cycle NO se toca
+    //                     para que al volver a habilitar arranque en el mismo punto.
+    // La referencia pasa por aplicaDerateoTemp() para que la protección térmica
+    // module la corriente automáticamente cuando el módulo se calienta.
     {
-        corrige_PWM(referencia);
+        static bool salida_estaba_off = false;
+        if (digitalRead(ENABLE_1) == LOW)
+        {
+            if (salida_estaba_off)
+            {
+                fija_Angulo(duty_cycle);
+                salida_estaba_off = false;
+            }
+            corrige_PWM(aplicaDerateoTemp(referencia));
+        }
+        else
+        {
+            fija_Angulo(0);
+            salida_estaba_off = true;
+        }
     }
 
     if (millis() > tiempo_inicio_Backligth + 60000)
